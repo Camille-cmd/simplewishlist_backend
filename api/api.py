@@ -44,7 +44,7 @@ def get_wishlist(request: HttpRequest):
     )
 
 
-@router.put("/wishlist", response={200: dict})
+@router.put("/wishlist", response={200: dict}, auth=None)
 def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
     """Create the wishlist with initial data"""
 

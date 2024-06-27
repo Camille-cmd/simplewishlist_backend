@@ -22,7 +22,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
             name="A pretty Barbie", wishlist_user=self.user, assigned_user=self.second_user
         )
 
-        url = reverse("wishlist")
+        url = reverse("api-1.0.0:get_wishlist")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -39,7 +39,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
                             "name": self.unassigned_wish.name,
                             "price": self.unassigned_wish.price,
                             "url": self.unassigned_wish.url,
-                            "id": self.unassigned_wish.id,
+                            "id": str(self.unassigned_wish.id),
                             "assigned_user": None,
                         },
                     ],
@@ -48,7 +48,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
                             "name": self.assigned_wish.name,
                             "price": self.assigned_wish.price,
                             "url": self.assigned_wish.url,
-                            "id": self.assigned_wish.id,
+                            "id": str(self.assigned_wish.id),
                             "assigned_user": self.second_user.name,
                         }
                     ],
@@ -57,7 +57,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
             ],
         }
 
-        self.assertEquals(response.data, expected_data)
+        self.assertEquals(response.json(), expected_data)
 
     def test_put_wishlist(self):
         """Test that we can create the wishlist"""
@@ -69,18 +69,20 @@ class TestWishListView(SimpleWishlistBaseTestCase):
             "allow_see_assigned": True,
             "other_users_names": ["Peter", "Michelle", "Victor"],
         }
-        url = reverse("wishlist")
+        url = reverse("api-1.0.0:create_wishlist")
         response = self.client.put(url, json.dumps(data))
 
+        self.assertEqual(response.status_code, 200)
+
         expected_response = {
-            "Paul": WishListUser.objects.get(name="Paul").id,
-            "Peter": WishListUser.objects.get(name="Peter").id,
-            "Michelle": WishListUser.objects.get(name="Michelle").id,
-            "Victor": WishListUser.objects.get(name="Victor").id,
+            "Paul": str(WishListUser.objects.get(name="Paul").id),
+            "Peter": str(WishListUser.objects.get(name="Peter").id),
+            "Michelle": str(WishListUser.objects.get(name="Michelle").id),
+            "Victor": str(WishListUser.objects.get(name="Victor").id),
         }
 
         self.assertTrue(WishList.objects.filter(wishlist_name=wishlist_name).exists())
-        self.assertEquals(response.data, expected_response)
+        self.assertEquals(response.json(), expected_response)
 
 
 class TestWishView(SimpleWishlistBaseTestCase):
@@ -104,9 +106,9 @@ class TestWishView(SimpleWishlistBaseTestCase):
         self.assertEqual(response.status_code, 201)
 
         # The response returns the wish id
-        self.assertIsNotNone(response.data.get("wish"))
+        self.assertIsNotNone(response.json().get("wish"))
 
-        wish_id = response.data["wish"]
+        wish_id = response.json()["wish"]
         wish = Wish.objects.get(id=wish_id)
 
         # Fields should be correctly set
@@ -119,7 +121,7 @@ class TestWishView(SimpleWishlistBaseTestCase):
     def test_put_wish_current_user_does_not_exist(self):
         """Test that if the current user does not exist, we have a 404"""
         fake_uuid = UUID(int=random.getrandbits(128), version=4)
-        client = Client(headers={"Authorization": str(fake_uuid)})
+        client = Client(headers={"Authorization": f"bearer {str(fake_uuid)}"})
         response = client.put(self.view_url, json.dumps(self.post_data))
         self.assertEqual(response.status_code, 404)
 
@@ -127,11 +129,11 @@ class TestWishView(SimpleWishlistBaseTestCase):
         """Test wish update"""
 
         # Create a wish that we will update with an assigned user
-        client = Client(headers={"Authorization": str(self.second_user.id)})
+        client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         data = {"assigned_user": str(self.second_user.id)}
 
         response = client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
 
         # Nothing except the assigned user should have changed
         self.wish.refresh_from_db()
@@ -153,20 +155,20 @@ class TestWishView(SimpleWishlistBaseTestCase):
         """Test that if a value is not valid, a 400 is returned"""
         data = {"name": 12}  # expects a str
         response = self.client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data["errors"][0]["type"], "string_type")
+        self.assertEqual(response.status_code, 422)  # 422 = unprocessable entity
+        self.assertEqual(response.json()["detail"][0]["type"], "string_type")
 
     def test_post_with_name_none(self):
         """Test value set to None"""
         data = {"name": None}
         response = self.client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
-        self.assertEquals(response.status_code, 400)
+        self.assertEquals(response.status_code, 422)
 
     def test_post_exclude_unset(self):
         """We do not want to keep unset values within the Pydantic model that wrongly would set value to None"""
         data = {"name": "Test"}
         response = self.client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         self.wish.refresh_from_db()
         self.assertEquals(self.wish.name, "Test")
         self.assertEquals(self.wish.price, "120€")
@@ -182,6 +184,6 @@ class TestWishView(SimpleWishlistBaseTestCase):
         self.assertEquals(response.status_code, 401)
 
         # With the second user, we try to delete. It should work as it is his wish
-        client = Client(headers={"Authorization": str(self.second_user.id)})
+        client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         response = client.delete(view_url)
-        self.assertEquals(response.status_code, 204)
+        self.assertEquals(response.status_code, 200)

@@ -1,0 +1,7 @@
+*/__pycache__/*
+api/tests/__pycache__/*
+core/models/__pycache__/*
+core/migrations/__pycache__/*
+core/tests/__pycache__/*
+api/migrations/__pycache__/*
+.idea/*

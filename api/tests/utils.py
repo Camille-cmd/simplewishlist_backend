@@ -10,4 +10,4 @@ class SimpleWishlistBaseTestCase(TestCase):
         self.user = WishListUserFactory(name="Bob", wishlist=self.wishlist)
         self.second_user = WishListUserFactory(name="Alice", wishlist=self.wishlist)
 
-        self.client = Client(headers={"Authorization": str(self.user.id)})
+        self.client = Client(headers={"Authorization": f"bearer {str(self.user.id)}"})

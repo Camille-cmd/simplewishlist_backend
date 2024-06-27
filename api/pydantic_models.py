@@ -1,5 +1,5 @@
 import collections
-from typing import Any, Optional, Self
+from typing import Any, Optional
 
 from pydantic import UUID4, AnyHttpUrl, model_validator
 from pydantic_core import PydanticCustomError
@@ -14,7 +14,7 @@ class WishlistInitModel(Schema):
     other_users_names: Optional[list[str]]
 
     @model_validator(mode="after")
-    def no_two_same_names_validate(self) -> Self:
+    def no_two_same_names_validate(self):
         names = self.wishlist_admin_name, *self.other_users_names
         # Count the number of element in the list that appear more than once
         duplicated_names = [x for x, y in collections.Counter(names).items() if y > 1]

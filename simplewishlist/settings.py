@@ -80,10 +80,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "simplewishlist",
-        "USER": "django",
-        "PASSWORD": "django",
+        "USER": "camille",
+        "PASSWORD": "password",
         "HOST": "127.0.0.1",
-        "PORT": "5433",
+        "PORT": "5432",
     }
 }
 
