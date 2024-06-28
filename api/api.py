@@ -1,21 +1,28 @@
-from ninja import Router
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
+from ninja import Router
 
 from api.exceptions import SimpleWishlistValidationError
-from api.pydantic_models import WishListLModel, WishListUserModel, WishlistInitModel, WishModel, WishModelUpdate, \
-    ErrorMessage
-from core.models import WishListUser, WishList, Wish
+from api.pydantic_models import (
+    ErrorMessage,
+    WishlistInitModel,
+    WishListLModel,
+    WishListUserModel,
+    WishModel,
+    WishModelUpdate,
+)
+from core.models import Wish, WishList, WishListUser
 
 router = Router()
 
 
+# WISHLIST
 @router.get("/wishlist", response={200: WishListLModel})
 def get_wishlist(request: HttpRequest):
     """Get the wishlist users and corresponding wishes"""
 
     current_user = request.auth
-    
+
     wishlist = current_user.wishlist
     users = wishlist.wishlist_users.all()
 
@@ -48,7 +55,7 @@ def get_wishlist(request: HttpRequest):
 def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
     """Create the wishlist with initial data"""
 
-    # Create the wishlist 
+    # Create the wishlist
     wishlist = WishList.objects.create(
         wishlist_name=payload.wishlist_name,
         show_users=payload.allow_see_assigned,
@@ -56,11 +63,11 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
 
     # Add users
     created_users = {}
-    # The admin is one of the users 
+    # The admin is one of the users
     wishlist_admin = WishListUser.objects.create(
         name=payload.wishlist_admin_name, wishlist=wishlist, is_admin=True
     )
-    # The others 
+    # The others
     created_users.update({wishlist_admin.name: wishlist_admin.id})
     if other_users_names := payload.other_users_names:
         for other_user_name in other_users_names:
@@ -93,7 +100,10 @@ def update_wish(request: HttpRequest, wish_id: str, payload: WishModelUpdate):
     current_user = request.auth
 
     try:
-        instance.update(current_user_id=current_user.id, update_data=payload.dict(exclude_unset=True))
+        instance.update(
+            current_user_id=current_user.id,
+            update_data=payload.dict(exclude_unset=True),
+        )
         return 201, {"wish": instance.id}
     except SimpleWishlistValidationError as e:
         return 400, {"error": {"message": str(e)}}

@@ -1,9 +1,11 @@
-from ninja import NinjaAPI
-from api.api import router as api_router
-from ninja.security import HttpBearer
 from uuid import UUID
-from core.models import WishListUser
+
 from django.shortcuts import get_object_or_404
+from ninja import NinjaAPI
+from ninja.security import HttpBearer
+
+from api.api import router as api_router
+from core.models import WishListUser
 
 
 class AuthBearer(HttpBearer):

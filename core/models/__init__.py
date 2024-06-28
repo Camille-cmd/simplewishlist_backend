@@ -1,3 +1,3 @@
-from .wish import Wish
-from .wishlist import WishList
-from .wishlist_users import WishListUser
+from .wish import Wish  # noqa
+from .wishlist import WishList  # noqa
+from .wishlist_users import WishListUser  # noqa

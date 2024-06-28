@@ -27,7 +27,9 @@ class Wish(models.Model):
     def __str__(self):
         return f"Wish de {self.wishlist_user}"
 
-    def validate_assigned_user(self, candidate_assigned_user_id: str | None, current_user_id: uuid.UUID) -> bool:
+    def validate_assigned_user(
+        self, candidate_assigned_user_id: str | None, current_user_id: uuid.UUID
+    ) -> bool:
         """Validate the candidate_assigned_user change conditions"""
         currently_assigned_user = self.assigned_user
 
@@ -43,17 +45,24 @@ class Wish(models.Model):
         # one can de-assigned oneself but no one else can
         if (
             not currently_assigned_user  # no assigned user yet
-            and candidate_assigned_user_id != self.wishlist_user.id  # candidate user is not the owner of the wish
-            and candidate_assigned_user_id == current_user_id  # only the current user can assign himself
+            and candidate_assigned_user_id
+            != self.wishlist_user.id  # candidate user is not the owner of the wish
+            and candidate_assigned_user_id
+            == current_user_id  # only the current user can assign himself
         ):
             return True
 
         # de-assigned (assigned user already exists, but he wants to remove himself)
-        if not candidate_assigned_user_id and currently_assigned_user.id == current_user_id:
+        if (
+            not candidate_assigned_user_id
+            and currently_assigned_user.id == current_user_id
+        ):
             return True
 
         raise SimpleWishlistValidationError(
-            model="Wish", field="assigned_user", message="Modifying assigned user unauthorized"
+            model="Wish",
+            field="assigned_user",
+            message="Modifying assigned user unauthorized",
         )
 
     def update(self, current_user_id: uuid.UUID, update_data: dict) -> None:
@@ -66,9 +75,10 @@ class Wish(models.Model):
         # Dynamic update of the instance fields
         for attr, value in update_data.items():
             if attr == "assigned_user":
-
                 # validation of assigned user
-                self.validate_assigned_user(candidate_assigned_user_id=value, current_user_id=current_user_id)
+                self.validate_assigned_user(
+                    candidate_assigned_user_id=value, current_user_id=current_user_id
+                )
 
                 try:
                     # For the assigned user, we need to get the WishListUser object
@@ -89,7 +99,9 @@ class Wish(models.Model):
                 # check that the user trying to change things is the owner of the wish
                 if current_user_id != self.wishlist_user.id:
                     raise SimpleWishlistValidationError(
-                        model="Wish", field=value, message="Only the owner of the wish can change the wish data."
+                        model="Wish",
+                        field=value,
+                        message="Only the owner of the wish can change the wish data.",
                     )
 
                 setattr(self, attr, value)

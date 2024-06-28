@@ -1,10 +1,10 @@
 import collections
 from typing import Any, Optional
 
-from pydantic import UUID4, AnyHttpUrl, model_validator
-from pydantic_core import PydanticCustomError
 from ninja import Schema
 from ninja.schema import DjangoGetter
+from pydantic import UUID4, AnyHttpUrl, model_validator
+from pydantic_core import PydanticCustomError
 
 
 class WishlistInitModel(Schema):
