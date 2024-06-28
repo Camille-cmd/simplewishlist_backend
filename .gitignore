@@ -5,3 +5,4 @@ core/migrations/__pycache__/*
 core/tests/__pycache__/*
 api/migrations/__pycache__/*
 .idea/*
+.coverage
