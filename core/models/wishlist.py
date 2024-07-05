@@ -11,6 +11,10 @@ class WishList(models.Model):
     def __str__(self):
         return f"Wishlist: {self.wishlist_name}"
 
+    def get_active_users(self):
+        """Return the users of the wishlist that are still active and allowed to participate"""
+        return self.wishlist_users.filter(is_active=True)
+
     class Meta:
         verbose_name = "Wishlist"
         verbose_name_plural = "Wishlists"

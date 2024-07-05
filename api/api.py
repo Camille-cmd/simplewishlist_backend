@@ -24,7 +24,7 @@ def get_wishlist(request: HttpRequest):
     current_user = request.auth
 
     wishlist = current_user.wishlist
-    users = wishlist.wishlist_users.all()
+    users = wishlist.get_active_users()
 
     # For each user, we need to collect the wishes they made and the wishes they took for others
     users_wishes = []
@@ -64,9 +64,7 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
     # Add users
     created_users = {}
     # The admin is one of the users
-    wishlist_admin = WishListUser.objects.create(
-        name=payload.wishlist_admin_name, wishlist=wishlist, is_admin=True
-    )
+    wishlist_admin = WishListUser.objects.create(name=payload.wishlist_admin_name, wishlist=wishlist, is_admin=True)
     # The others
     created_users.update({wishlist_admin.name: wishlist_admin.id})
     if other_users_names := payload.other_users_names:

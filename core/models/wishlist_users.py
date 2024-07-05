@@ -9,9 +9,8 @@ class WishListUser(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     is_admin = models.BooleanField(default=False)
-    wishlist = models.ForeignKey(
-        "WishList", on_delete=models.CASCADE, related_name="wishlist_users"
-    )
+    is_active = models.BooleanField(default=True, help_text="Is the user allowed to participate in the wishlist?")
+    wishlist = models.ForeignKey("WishList", on_delete=models.CASCADE, related_name="wishlist_users")
 
     def __str__(self):
         return self.name
@@ -27,9 +26,7 @@ class WishListUser(models.Model):
                     price=wish.price or None,
                     url=wish.url or None,
                     id=wish.id,
-                    assigned_user=wish.assigned_user.name
-                    if wish.assigned_user
-                    else None,
+                    assigned_user=wish.assigned_user.name if wish.assigned_user else None,
                 )
             )
         return wishes

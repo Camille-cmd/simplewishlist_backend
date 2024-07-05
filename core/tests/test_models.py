@@ -13,9 +13,7 @@ class TestWishListUser(SimpleWishlistBaseTestCase):
     def setUp(self):
         super().setUp()
         # Create Wishes for the user
-        self.unassigned_wish = WishFactory.create(
-            name="A big Teddy Bear", price="12€", wishlist_user=self.user
-        )
+        self.unassigned_wish = WishFactory.create(name="A big Teddy Bear", price="12€", wishlist_user=self.user)
         # Second user took one of the wishes
         self.assigned_wish = WishFactory.create(
             name="A pretty Barbie",
@@ -24,17 +22,13 @@ class TestWishListUser(SimpleWishlistBaseTestCase):
         )
 
     def test_wishlist_user_creation(self):
-        user = WishListUser.objects.create(
-            name="Bob", is_admin=True, wishlist=self.wishlist
-        )
+        user = WishListUser.objects.create(name="Bob", is_admin=True, wishlist=self.wishlist)
         self.assertTrue(isinstance(user, WishListUser))
 
     def test_get_user_wishes(self):
         """Test that we correctly retrieve the user wishes"""
         # Create a second wish for the user
-        second_wish = WishFactory.create(
-            name="A big Teddy Bear 2", wishlist_user=self.user
-        )
+        second_wish = WishFactory.create(name="A big Teddy Bear 2", wishlist_user=self.user)
 
         # Wishes without an already assigned user
         wishes = self.user.get_user_wishes(already_assigned=False)
@@ -52,9 +46,7 @@ class TestWish(SimpleWishlistBaseTestCase):
     def setUp(self):
         super().setUp()
         # Create Wishes for the user
-        self.unassigned_wish = WishFactory.create(
-            name="A big Teddy Bear", price="12€", wishlist_user=self.user
-        )
+        self.unassigned_wish = WishFactory.create(name="A big Teddy Bear", price="12€", wishlist_user=self.user)
         # Second user took one of the wishes
         self.assigned_wish = WishFactory.create(
             name="A pretty Barbie",
@@ -67,22 +59,16 @@ class TestWish(SimpleWishlistBaseTestCase):
     def assert_raises_validation_error(
         self, wish: Wish, candidate_assigned_user_id: UUID | None, current_user_id: UUID
     ):
-        with self.assertRaisesRegex(
-            SimpleWishlistValidationError, "Modifying assigned user unauthorized"
-        ):
+        with self.assertRaisesRegex(SimpleWishlistValidationError, "Modifying assigned user unauthorized"):
             # currently the "second user" is the one assigned to this wish and only him can change it
             wish.validate_assigned_user(
                 # candidate_assigned_user_id comes from the request, so is a string
-                candidate_assigned_user_id=str(candidate_assigned_user_id)
-                if candidate_assigned_user_id
-                else None,
+                candidate_assigned_user_id=str(candidate_assigned_user_id) if candidate_assigned_user_id else None,
                 current_user_id=current_user_id,
             )
 
     def test_wish_creation(self):
-        wish = Wish.objects.create(
-            name="Wish Test", price="12€", wishlist_user=self.user
-        )
+        wish = Wish.objects.create(name="Wish Test", price="12€", wishlist_user=self.user)
         self.assertTrue(isinstance(wish, Wish))
 
     def test_validate_assigned_user_only_current_assigned_can_update(self):
@@ -152,9 +138,7 @@ class TestWish(SimpleWishlistBaseTestCase):
             name="Another Name",
         ).dict(exclude_unset=True)
 
-        self.unassigned_wish.update(
-            current_user_id=self.user.id, update_data=update_data
-        )
+        self.unassigned_wish.update(current_user_id=self.user.id, update_data=update_data)
         self.unassigned_wish.refresh_from_db()
         self.assertEquals(self.unassigned_wish.name, update_data["name"])
         self.assertEquals(self.unassigned_wish.price, "12€")  # should not have changed
@@ -167,9 +151,7 @@ class TestWish(SimpleWishlistBaseTestCase):
 
         # CASE 2: someone else that the owner of the wish tried to change it
         with self.assertRaisesRegex(SimpleWishlistValidationError, "Only the owner"):
-            self.unassigned_wish.update(
-                current_user_id=self.second_user.id, update_data=update_data
-            )
+            self.unassigned_wish.update(current_user_id=self.second_user.id, update_data=update_data)
 
     @patch.object(Wish, "validate_assigned_user", return_value=True)  # already tested
     def test_update_assigned_user_does_not_exist(self, validate_user_mock):
@@ -180,17 +162,13 @@ class TestWish(SimpleWishlistBaseTestCase):
         ).dict(exclude_unset=True)
 
         with self.assertRaisesRegex(SimpleWishlistValidationError, "does not exist."):
-            self.unassigned_wish.update(
-                current_user_id=self.user.id, update_data=update_data
-            )
+            self.unassigned_wish.update(current_user_id=self.user.id, update_data=update_data)
 
         # However, if it exists, the assignment should work
         update_data = WishModelUpdate(
             assigned_user=str(self.second_user.id),
         ).dict(exclude_unset=True)
-        self.unassigned_wish.update(
-            current_user_id=self.second_user.id, update_data=update_data
-        )
+        self.unassigned_wish.update(current_user_id=self.second_user.id, update_data=update_data)
         self.assertEquals(self.unassigned_wish.assigned_user, self.second_user)
 
     @patch.object(Wish, "validate_assigned_user", return_value=True)  # already tested
@@ -199,7 +177,16 @@ class TestWish(SimpleWishlistBaseTestCase):
         update_data = WishModelUpdate(
             assigned_user=None,
         ).dict(exclude_unset=True)
-        self.unassigned_wish.update(
-            current_user_id=self.second_user.id, update_data=update_data
-        )
+        self.unassigned_wish.update(current_user_id=self.second_user.id, update_data=update_data)
         self.assertEquals(self.unassigned_wish.assigned_user, None)
+
+
+class TestWishList(SimpleWishlistBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.inactive_user = WishListUserFactory(name="Inactive", wishlist=self.wishlist, is_active=False)
+
+    def test_only_active_users_are_returned(self):
+        active_users = self.wishlist.get_active_users()
+        self.assertIn(self.user, active_users)
+        self.assertNotIn(self.inactive_user, active_users)

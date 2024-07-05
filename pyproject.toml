@@ -1,3 +1,7 @@
+[project]
+name = "SimpleWishlist"
+version = "0.0.1"
+
 [tool.coverage.report]
 exclude_also = [
     "def __str__",
