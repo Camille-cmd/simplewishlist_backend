@@ -6,18 +6,19 @@ from api.exceptions import SimpleWishlistValidationError
 from api.pydantic_models import (
     ErrorMessage,
     WishlistInitModel,
-    WishListLModel,
+    WishListModel,
     WishListUserModel,
     WishModel,
     WishModelUpdate,
 )
 from core.models import Wish, WishList, WishListUser
+from core.pydantic_models import WishListUserFromModel
 
 router = Router()
 
 
 # WISHLIST
-@router.get("/wishlist", response={200: WishListLModel})
+@router.get("/wishlist", response={200: WishListModel})
 def get_wishlist(request: HttpRequest):
     """Get the wishlist users and corresponding wishes"""
 
@@ -42,7 +43,7 @@ def get_wishlist(request: HttpRequest):
             )
         )
 
-    return WishListLModel(
+    return WishListModel(
         name=wishlist.wishlist_name,
         allowSeeAssigned=wishlist.show_users,
         currentUser=current_user.name,
@@ -76,6 +77,36 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
             created_users.update({created_user.name: created_user.id})
 
     return created_users
+
+
+@router.get("/wishlist/users", response={201: list[WishListUserFromModel]})
+def get_wishlist_users(request: HttpRequest):
+    """Get all the users of the wishlist for the current user"""
+    current_user = request.auth
+    wishlist = current_user.wishlist
+
+    users = wishlist.get_users()
+    return 201, users
+
+
+@router.post("/wishlist/users/{user_id}/deactivate", response={201: dict, 400: ErrorMessage})
+def deactivate_user(request: HttpRequest, user_id: str):
+    """Deactivate a user from the wishlist"""
+    current_user = request.auth
+    if not current_user.is_admin:
+        return 400, {"error": {"message": "Only the admin can deactivate a user"}}
+
+    wishlist = current_user.wishlist
+
+    try:
+        user = wishlist.wishlist_users.get(id=user_id)
+        if user.is_admin:
+            return 400, {"error": {"message": "The admin can not be deactivated"}}
+        user.is_active = False
+        user.save()
+        return 201, {"user": user.id}
+    except WishListUser.DoesNotExist:
+        return 400, {"error": {"message": "User not found"}}
 
 
 # WISH

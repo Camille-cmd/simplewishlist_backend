@@ -66,7 +66,7 @@ class WishListUserModel(Schema):
     assignedWishes: Optional[list[WishListWishModel]] = []
 
 
-class WishListLModel(Schema):
+class WishListModel(Schema):
     name: str
     allowSeeAssigned: bool
     currentUser: str
