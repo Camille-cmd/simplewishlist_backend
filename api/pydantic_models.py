@@ -4,6 +4,7 @@ from typing import Any, Optional
 from ninja import Schema
 from ninja.schema import DjangoGetter
 from pydantic import UUID4, AnyHttpUrl, model_validator
+from pydantic.main import Model
 from pydantic_core import PydanticCustomError
 
 
@@ -40,8 +41,8 @@ class WishModel(Schema):
 
     name: str
     price: Optional[str] = None
-    url: Optional[AnyHttpUrl] = None
-
+    # TODO
+    url: Optional[AnyHttpUrl | str] = None
 
 class WishModelUpdate(WishModel):
     """Wish Update (all fields are optionals and we can add an assigned_user)"""
@@ -63,7 +64,6 @@ class WishModelUpdate(WishModel):
 class WishListUserModel(Schema):
     user: str
     wishes: Optional[list[WishListWishModel]] = []
-    assignedWishes: Optional[list[WishListWishModel]] = []
 
 
 class WishListModel(Schema):

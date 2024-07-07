@@ -13,7 +13,7 @@ nodeenv==1.9.1
 platformdirs==4.2.2
 pre-commit==3.7.1
 psycopg2-binary==2.9.9
-pydantic==2.7.4gi
+pydantic==2.7.4
 pydantic-core==2.18.4
 python-dateutil==2.9.0.post0
 pyyaml==6.0.1

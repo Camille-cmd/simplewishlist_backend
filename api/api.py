@@ -31,15 +31,12 @@ def get_wishlist(request: HttpRequest):
     users_wishes = []
     for user in users:
         # Unassigned wishes
-        wishes = user.get_user_wishes(already_assigned=False)
-        # Wishes with a user assigned
-        wishes_already_assigned = user.get_user_wishes(already_assigned=True)
+        wishes = user.get_user_wishes()
 
         users_wishes.append(
             WishListUserModel(
                 user=user.name,
                 wishes=wishes,
-                assignedWishes=wishes_already_assigned,
             )
         )
 
@@ -147,6 +144,9 @@ def delete_wish(request: HttpRequest, wish_id: str):
     # Only the owner of a wish can delete it
     if instance.wishlist_user.id != current_user.id:
         error = {"message": "Only the owner of the wish can delete it."}
+        return 401, {"error": error}
+    elif instance.assigned_user is not None:
+        error = {"message": "Someone is already dealing with the wish, it can not be deleted for now."}
         return 401, {"error": error}
     else:
         instance.delete()

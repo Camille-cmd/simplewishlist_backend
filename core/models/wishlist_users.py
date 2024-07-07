@@ -15,11 +15,11 @@ class WishListUser(models.Model):
     def __str__(self):
         return self.name
 
-    def get_user_wishes(self, already_assigned: bool) -> [WishListWishModel]:
+    def get_user_wishes(self) -> [WishListWishModel]:
         """Return a Pydantic model containing the API response for User wishes"""
         wishes = []
         # We either return the wishes already assigned to someone, or not
-        for wish in self.wishes.exclude(assigned_user__isnull=already_assigned):
+        for wish in self.wishes.all():
             wishes.append(
                 WishListWishModel(
                     name=wish.name,
