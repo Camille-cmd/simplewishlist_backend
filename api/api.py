@@ -41,6 +41,7 @@ def get_wishlist(request: HttpRequest):
         )
 
     return WishListModel(
+        wishListId=wishlist.id,
         name=wishlist.wishlist_name,
         allowSeeAssigned=wishlist.show_users,
         currentUser=current_user.name,
@@ -121,15 +122,12 @@ def create_wish(request: HttpRequest, payload: WishModel):
 
 @router.post("/wish/{wish_id}", response={201: dict, 400: ErrorMessage, 404: str})
 def update_wish(request: HttpRequest, wish_id: str, payload: WishModelUpdate):
-    instance = get_object_or_404(Wish, pk=wish_id)
-
-    current_user = request.auth
-
     try:
-        instance.update(
-            current_user_id=current_user.id,
-            update_data=payload.dict(exclude_unset=True),
-        )
+        instance = get_object_or_404(Wish, pk=wish_id)
+
+        current_user = request.auth
+        update_wish(current_user, wish_id, payload)
+
         return 201, {"wish": instance.id}
     except SimpleWishlistValidationError as e:
         return 400, {"error": {"message": str(e)}}

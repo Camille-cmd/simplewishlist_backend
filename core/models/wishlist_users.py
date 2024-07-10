@@ -15,20 +15,22 @@ class WishListUser(models.Model):
     def __str__(self):
         return self.name
 
-    def get_user_wishes(self) -> [WishListWishModel]:
+    def get_user_wishes(self, foo=False) -> [WishListWishModel]:
         """Return a Pydantic model containing the API response for User wishes"""
         wishes = []
         # We either return the wishes already assigned to someone, or not
         for wish in self.wishes.all():
-            wishes.append(
-                WishListWishModel(
-                    name=wish.name,
-                    price=wish.price or None,
-                    url=wish.url or None,
-                    id=wish.id,
-                    assigned_user=wish.assigned_user.name if wish.assigned_user else None,
-                )
+            wish = WishListWishModel(
+                name=wish.name,
+                price=wish.price or None,
+                url=wish.url or None,
+                id=wish.id,
+                assigned_user=wish.assigned_user.name if wish.assigned_user else None,
             )
+            if foo:
+                wishes.append(wish.dict())
+            else:
+                wishes.append(wish)
         return wishes
 
     class Meta:
