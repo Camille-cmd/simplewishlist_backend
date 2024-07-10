@@ -63,8 +63,12 @@ class WishlistConsumer(JsonWebsocketConsumer):
         # Update the wish
         update_wish(self.current_user, payload.objectId, wish_payload)
 
+        action = "update_wish"
+        if wish_payload.dict()["assigned_user"] is not None:
+            action = "change_wish_assigned_user"
+
         # Send the updated wishes to the groups
-        self.send_update_wishes()
+        self.send_update_wishes(action=action)
 
     def create_wish(self, payload: WebhookPayloadModel):
         """Create a wish and send the updated wishes to the group"""
@@ -77,7 +81,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         Wish.objects.create(**wish_data)
 
         # Send the updated wishes to the groups
-        self.send_update_wishes()
+        self.send_update_wishes(action="create_wish")
 
     def delete_wish(self, payload: WebhookPayloadModel):
         """Delete a wish and send the updated wishes to the group"""
@@ -90,26 +94,23 @@ class WishlistConsumer(JsonWebsocketConsumer):
         instance.delete()
 
         # Send the updated wishes to the groups
-        self.send_update_wishes()
+        self.send_update_wishes(action="delete_wish")
 
-    def send_update_wishes(self):
+    def send_update_wishes(self, action: str = "update_wishes"):
         """Send the updated wishes to the group"""
         users_wishes = get_all_users_wishes(self.wishlist, as_dict=True)
 
-        self.send_group_message("update_wishes", users_wishes)
+        self.send_group_message("update_wishes", action, users_wishes)
 
     # RESPONSES
-    def send_group_message(self, type: str, data: dict | list | str):
+    def send_group_message(self, type: str, action: str, data: dict | list | str):
         """
         Send a message to the group with the given type and data
         The type is the name of the method to call in the consumer
         """
         async_to_sync(self.channel_layer.group_send)(
             self.room_group_name,
-            {
-                "type": type,
-                "data": data,
-            },
+            {"type": type, "data": data, "userToken": self.current_user.name, "action": action},
         )
 
     def _send(self, event: dict):
