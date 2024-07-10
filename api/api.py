@@ -7,10 +7,10 @@ from api.pydantic_models import (
     ErrorMessage,
     WishlistInitModel,
     WishListModel,
-    WishListUserModel,
     WishModel,
     WishModelUpdate,
 )
+from api.utils import get_all_users_wishes
 from core.models import Wish, WishList, WishListUser
 from core.pydantic_models import WishListUserFromModel
 
@@ -25,20 +25,8 @@ def get_wishlist(request: HttpRequest):
     current_user = request.auth
 
     wishlist = current_user.wishlist
-    users = wishlist.get_active_users()
-
-    # For each user, we need to collect the wishes they made and the wishes they took for others
-    users_wishes = []
-    for user in users:
-        # Unassigned wishes
-        wishes = user.get_user_wishes()
-
-        users_wishes.append(
-            WishListUserModel(
-                user=user.name,
-                wishes=wishes,
-            )
-        )
+    # For each user, we need to collect their wishes
+    users_wishes = get_all_users_wishes(wishlist, as_dict=False)
 
     return WishListModel(
         wishListId=wishlist.id,
@@ -140,11 +128,9 @@ def delete_wish(request: HttpRequest, wish_id: str):
     current_user = request.auth
 
     # Only the owner of a wish can delete it
-    if instance.wishlist_user.id != current_user.id:
-        error = {"message": "Only the owner of the wish can delete it."}
-        return 401, {"error": error}
-    elif instance.assigned_user is not None:
-        error = {"message": "Someone is already dealing with the wish, it can not be deleted for now."}
-        return 401, {"error": error}
+    can_be_deleted, error_message = instance.can_be_deleted(current_user.id)
+    if not can_be_deleted:
+        return 401, {"error": {"message": error_message}}
+
     else:
         instance.delete()

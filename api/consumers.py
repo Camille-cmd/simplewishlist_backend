@@ -3,11 +3,12 @@ import json
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
 from django.core.serializers.json import DjangoJSONEncoder
+from django.shortcuts import get_object_or_404
 
 from api.exceptions import SimpleWishlistValidationError
-from api.pydantic_models import WishModelUpdate, WishListUserModel, WebhookPayloadModel
-from api.utils import update_wish
-from core.models import WishListUser
+from api.pydantic_models import WishModelUpdate, WebhookPayloadModel, WishModel
+from api.utils import update_wish, get_all_users_wishes
+from core.models import WishListUser, Wish
 
 
 class WishlistConsumer(JsonWebsocketConsumer):
@@ -20,7 +21,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         try:
             self.current_user = WishListUser.objects.get(pk=self.scope["url_route"]["kwargs"]["wishlist_user"])
         except WishListUser.DoesNotExist:
-            self._send(json.dumps({"type": "error_message", "data": "User not found"}))
+            self._send({"type": "error_message", "data": "User not found"})
             self.close()
 
         self.wishlist = self.current_user.wishlist
@@ -44,18 +45,18 @@ class WishlistConsumer(JsonWebsocketConsumer):
             payload = WebhookPayloadModel.model_validate(content)
 
             # Dynamically call the method based on the payload type
-            # I.e : if the payload type is "assign_wish", we call the assign_wish method
+            # I.e: if the payload type is "update_wish", we call the update_wish method
             action_method = getattr(self, payload.type)
 
             action_method(payload)
 
         except SimpleWishlistValidationError as e:
-            self._send(json.dumps({"type": "error_message", "data": str(e)}))
+            self._send({"type": "error_message", "data": str(e)})
         except Exception as e:
-            self._send(json.dumps({"type": "error_message", "data": str(e)}))
+            self._send({"type": "error_message", "data": str(e)})
 
     # ACTIONS
-    def assign_wish(self, payload: WebhookPayloadModel):
+    def update_wish(self, payload: WebhookPayloadModel):
         """Assign a wish to a user and send the updated wishes to the group"""
         wish_payload = WishModelUpdate.model_validate(payload.post_values)
 
@@ -63,16 +64,37 @@ class WishlistConsumer(JsonWebsocketConsumer):
         update_wish(self.current_user, payload.objectId, wish_payload)
 
         # Send the updated wishes to the groups
-        users = self.wishlist.get_active_users()
-        users_wishes = []
-        for user in users:
-            wishes = user.get_user_wishes()
-            users_wishes.append(
-                WishListUserModel(
-                    user=user.name,
-                    wishes=wishes,
-                ).dict()
-            )
+        self.send_update_wishes()
+
+    def create_wish(self, payload: WebhookPayloadModel):
+        """Create a wish and send the updated wishes to the group"""
+        wish_payload = WishModel.model_validate(payload.post_values)
+
+        # Add the wishlist user
+        wish_data = wish_payload.dict()
+        wish_data.update({"wishlist_user": self.current_user})
+
+        Wish.objects.create(**wish_data)
+
+        # Send the updated wishes to the groups
+        self.send_update_wishes()
+
+    def delete_wish(self, payload: WebhookPayloadModel):
+        """Delete a wish and send the updated wishes to the group"""
+        instance = get_object_or_404(Wish, pk=payload.objectId)
+
+        can_be_deleted, error_message = instance.can_be_deleted(self.current_user.id)
+        if not can_be_deleted:
+            raise SimpleWishlistValidationError(model="Wish", field=None, message=error_message)
+
+        instance.delete()
+
+        # Send the updated wishes to the groups
+        self.send_update_wishes()
+
+    def send_update_wishes(self):
+        """Send the updated wishes to the group"""
+        users_wishes = get_all_users_wishes(self.wishlist, as_dict=True)
 
         self.send_group_message("update_wishes", users_wishes)
 

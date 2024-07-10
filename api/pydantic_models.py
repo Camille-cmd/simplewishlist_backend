@@ -86,5 +86,7 @@ class ErrorMessage(Schema):
 class WebhookPayloadModel(Schema):
     type: str
     currentUser: UUID4
-    post_values: dict
+    post_values: Optional[dict] = {}
     objectId: Optional[UUID4] = None
+
+    # todo validate if post_values is not None, then objectId should not be None
