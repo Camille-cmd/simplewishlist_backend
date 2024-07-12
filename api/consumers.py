@@ -31,6 +31,9 @@ class WishlistConsumer(JsonWebsocketConsumer):
         # Join room group
         async_to_sync(self.channel_layer.group_add)(self.room_group_name, self.channel_name)
 
+        self.send_group_message(
+            "new_group_member_connection", "new_group_member_connection", {"userName": self.current_user.name}
+        )
         self.accept()
 
     def disconnect(self, close_code):
@@ -120,4 +123,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         self._send(event)
 
     def error_message(self, event: dict):
+        self._send(event)
+
+    def new_group_member_connection(self, event: dict):
         self._send(event)

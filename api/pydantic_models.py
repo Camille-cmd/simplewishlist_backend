@@ -22,7 +22,7 @@ class WishlistInitModel(Schema):
             raise PydanticCustomError(
                 "identical_names_not_allowed",
                 "Identical names detected. Names need to be different in order to differentiate people",
-                dict(duplicated_names=set(duplicated_names)),
+                dict(duplicated_names=list(set(duplicated_names))),
             )
         return self
 
