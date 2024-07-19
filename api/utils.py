@@ -4,7 +4,7 @@ from api.pydantic_models import WishModelUpdate, WishListUserModel
 from core.models import Wish, WishListUser, WishList
 
 
-def update_wish(current_user: WishListUser, wish_id: int, payload: WishModelUpdate):
+def do_update_wish(current_user: WishListUser, wish_id: int, payload: WishModelUpdate):
     """Update a wish from a wish id"""
     instance = get_object_or_404(Wish, pk=wish_id)
 

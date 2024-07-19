@@ -111,4 +111,3 @@ class Wish(models.Model):
 
     class Meta:
         verbose_name_plural = "wishes"
-        ordering = ["-id"]

@@ -12,11 +12,10 @@ from core.models import Wish, WishList, WishListUser
 
 class TestWishListView(SimpleWishlistBaseTestCase):
     def test_get_wishlist(self):
+        self.maxDiff = None
         """Test returned data from the get wishlist view"""
         # Create Wishes for the user
-        self.unassigned_wish = WishFactory.create(
-            name="A big Teddy Bear", wishlist_user=self.user
-        )
+        self.unassigned_wish = WishFactory.create(name="A big Teddy Bear", wishlist_user=self.user)
         # Second user took one of the wishes
         self.assigned_wish = WishFactory.create(
             name="A pretty Barbie",
@@ -29,6 +28,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         self.assertEqual(response.status_code, 200)
 
         expected_data = {
+            "wishListId": str(self.wishlist.id),
             "name": self.wishlist.wishlist_name,
             "allowSeeAssigned": False,
             "currentUser": self.user.name,
@@ -44,18 +44,16 @@ class TestWishListView(SimpleWishlistBaseTestCase):
                             "id": str(self.unassigned_wish.id),
                             "assigned_user": None,
                         },
-                    ],
-                    "assignedWishes": [
                         {
                             "name": self.assigned_wish.name,
                             "price": self.assigned_wish.price,
                             "url": self.assigned_wish.url,
                             "id": str(self.assigned_wish.id),
                             "assigned_user": self.second_user.name,
-                        }
+                        },
                     ],
                 },
-                {"user": self.second_user.name, "wishes": [], "assignedWishes": []},
+                {"user": self.second_user.name, "wishes": []},
             ],
         }
 
@@ -95,15 +93,11 @@ class TestWishView(SimpleWishlistBaseTestCase):
             "price": "12.45€",
             "url": "https://example.com/",
         }
-        self.wish = WishFactory(
-            name="A fast bike", price="120€", wishlist_user=self.user
-        )
+        self.wish = WishFactory(name="A fast bike", price="120€", wishlist_user=self.user)
 
         self.view_url = reverse("api-1.0.0:create_wish")
 
-        self.wish_view_url = reverse(
-            "api-1.0.0:update_wish", kwargs={"wish_id": str(self.wish.id)}
-        )
+        self.wish_view_url = reverse("api-1.0.0:update_wish", kwargs={"wish_id": str(self.wish.id)})
 
     def test_put_wish(self):
         """Test wish creation"""
@@ -137,9 +131,7 @@ class TestWishView(SimpleWishlistBaseTestCase):
         client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         data = {"assigned_user": str(self.second_user.id)}
 
-        response = client.post(
-            self.wish_view_url, data=json.dumps(data), content_type="application/json"
-        )
+        response = client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
         self.assertEqual(response.status_code, 201)
 
         # Nothing except the assigned user should have changed
@@ -155,34 +147,26 @@ class TestWishView(SimpleWishlistBaseTestCase):
         # If the wish does not exist, we get a 404
         fake_uuid = UUID(int=random.getrandbits(128), version=4)
         view_url = reverse("api-1.0.0:update_wish", kwargs={"wish_id": str(fake_uuid)})
-        response = self.client.post(
-            view_url, data=json.dumps(data), content_type="application/json"
-        )
+        response = self.client.post(view_url, data=json.dumps(data), content_type="application/json")
         self.assertEqual(response.status_code, 404)
 
     def test_post_wish_invalid_value(self):
         """Test that if a value is not valid, a 400 is returned"""
         data = {"name": 12}  # expects a str
-        response = self.client.post(
-            self.wish_view_url, data=json.dumps(data), content_type="application/json"
-        )
+        response = self.client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
         self.assertEqual(response.status_code, 422)  # 422 = unprocessable entity
         self.assertEqual(response.json()["detail"][0]["type"], "string_type")
 
     def test_post_with_name_none(self):
         """Test value set to None"""
         data = {"name": None}
-        response = self.client.post(
-            self.wish_view_url, data=json.dumps(data), content_type="application/json"
-        )
+        response = self.client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
         self.assertEquals(response.status_code, 422)
 
     def test_post_exclude_unset(self):
         """We do not want to keep unset values within the Pydantic model that wrongly would set value to None"""
         data = {"name": "Test"}
-        response = self.client.post(
-            self.wish_view_url, data=json.dumps(data), content_type="application/json"
-        )
+        response = self.client.post(self.wish_view_url, data=json.dumps(data), content_type="application/json")
         self.assertEqual(response.status_code, 201)
         self.wish.refresh_from_db()
         self.assertEquals(self.wish.name, "Test")

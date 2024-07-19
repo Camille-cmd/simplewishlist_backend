@@ -10,7 +10,7 @@ from api.pydantic_models import (
     WishModel,
     WishModelUpdate,
 )
-from api.utils import get_all_users_wishes
+from api.utils import get_all_users_wishes, do_update_wish
 from core.models import Wish, WishList, WishListUser
 from core.pydantic_models import WishListUserFromModel
 
@@ -114,7 +114,7 @@ def update_wish(request: HttpRequest, wish_id: str, payload: WishModelUpdate):
         instance = get_object_or_404(Wish, pk=wish_id)
 
         current_user = request.auth
-        update_wish(current_user, wish_id, payload)
+        do_update_wish(current_user, wish_id, payload)
 
         return 201, {"wish": instance.id}
     except SimpleWishlistValidationError as e:

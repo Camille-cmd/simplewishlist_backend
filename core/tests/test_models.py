@@ -30,16 +30,14 @@ class TestWishListUser(SimpleWishlistBaseTestCase):
         # Create a second wish for the user
         second_wish = WishFactory.create(name="A big Teddy Bear 2", wishlist_user=self.user)
 
-        # Wishes without an already assigned user
-        wishes = self.user.get_user_wishes(already_assigned=False)
-        self.assertEquals(len(wishes), 2)
+        # Wishes no matter if they are assigned or not
+        wishes = self.user.get_user_wishes()
+        self.assertEquals(len(wishes), 3)
+        # Ordered by pk
+        wishes = sorted(wishes, key=lambda x: x.name)
         self.assertEquals(wishes[0].id, self.unassigned_wish.id)
         self.assertEquals(wishes[1].id, second_wish.id)
-
-        # Wishes with an assigned user
-        wishes = self.user.get_user_wishes(already_assigned=True)
-        self.assertEquals(len(wishes), 1)
-        self.assertEquals(wishes[0].id, self.assigned_wish.id)
+        self.assertEquals(wishes[2].id, self.assigned_wish.id)
 
 
 class TestWish(SimpleWishlistBaseTestCase):

@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 
 from api.exceptions import SimpleWishlistValidationError
 from api.pydantic_models import WishModelUpdate, WebhookPayloadModel, WishModel
-from api.utils import update_wish, get_all_users_wishes
+from api.utils import get_all_users_wishes, do_update_wish
 from core.models import WishListUser, Wish
 
 
@@ -64,7 +64,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         wish_payload = WishModelUpdate.model_validate(payload.post_values)
 
         # Update the wish
-        update_wish(self.current_user, payload.objectId, wish_payload)
+        do_update_wish(self.current_user, payload.objectId, wish_payload)
 
         action = "update_wish"
         if wish_payload.dict()["assigned_user"] is not None:
