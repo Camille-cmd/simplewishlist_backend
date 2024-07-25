@@ -31,9 +31,6 @@ class WishlistConsumer(JsonWebsocketConsumer):
         # Join room group
         async_to_sync(self.channel_layer.group_add)(self.room_group_name, self.channel_name)
 
-        self.send_group_message(
-            "new_group_member_connection", "new_group_member_connection", {"userName": self.current_user.name}
-        )
         self.accept()
 
     def disconnect(self, close_code):
@@ -47,11 +44,15 @@ class WishlistConsumer(JsonWebsocketConsumer):
             # Validate the payload
             payload = WebhookPayloadModel.model_validate(content)
 
-            # Dynamically call the method based on the payload type
-            # I.e: if the payload type is "update_wish", we call the update_wish method
-            action_method = getattr(self, payload.type)
-
-            action_method(payload)
+            match payload.type:
+                case "update_wish":
+                    self.update_wish(payload)
+                case "create_wish":
+                    self.create_wish(payload)
+                case "delete_wish":
+                    self.delete_wish(payload)
+                case _:
+                    self._send({"type": "error_message", "data": "Invalid action"})
 
         except SimpleWishlistValidationError as e:
             self._send({"type": "error_message", "data": str(e)})
@@ -71,7 +72,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
             action = "change_wish_assigned_user"
 
         # Send the updated wishes to the groups
-        self.send_update_wishes(action=action)
+        self._send_update_wishes(action=action)
 
     def create_wish(self, payload: WebhookPayloadModel):
         """Create a wish and send the updated wishes to the group"""
@@ -84,7 +85,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         Wish.objects.create(**wish_data)
 
         # Send the updated wishes to the groups
-        self.send_update_wishes(action="create_wish")
+        self._send_update_wishes(action="create_wish")
 
     def delete_wish(self, payload: WebhookPayloadModel):
         """Delete a wish and send the updated wishes to the group"""
@@ -97,9 +98,9 @@ class WishlistConsumer(JsonWebsocketConsumer):
         instance.delete()
 
         # Send the updated wishes to the groups
-        self.send_update_wishes(action="delete_wish")
+        self._send_update_wishes(action="delete_wish")
 
-    def send_update_wishes(self, action: str = "update_wishes"):
+    def _send_update_wishes(self, action: str = "update_wishes"):
         """Send the updated wishes to the group"""
         users_wishes = get_all_users_wishes(self.wishlist, as_dict=True)
 
