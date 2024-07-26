@@ -104,9 +104,6 @@ class Wish(models.Model):
         if self.wishlist_user.id != current_user_id:
             return False, "Only the owner of the wish can delete it."
 
-        if self.assigned_user:
-            return False, "Someone is already dealing with the wish, it can not be deleted for now."
-
         return True, ""
 
     class Meta:

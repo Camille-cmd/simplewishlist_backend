@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 from ninja import Schema
 from ninja.schema import DjangoGetter
-from pydantic import UUID4, AnyHttpUrl, model_validator
+from pydantic import UUID4, model_validator, AnyHttpUrl
 from pydantic_core import PydanticCustomError
 
 
@@ -40,8 +40,17 @@ class WishModel(Schema):
 
     name: str
     price: Optional[str] = None
-    # TODO
-    url: Optional[AnyHttpUrl | str] = None
+    url: Optional[AnyHttpUrl] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_whether_name_is_none(cls, data: DjangoGetter) -> Any:
+        if not data.name:
+            raise PydanticCustomError(
+                "none_value_not_allowed",
+                "Name can not be null nor empty",
+            )
+        return data
 
 
 class WishModelUpdate(WishModel):
@@ -56,7 +65,7 @@ class WishModelUpdate(WishModel):
         if hasattr(data, "name") and data.name is None:
             raise PydanticCustomError(
                 "none_value_not_allowed",
-                "Name can not be null",
+                "Name can not be null nor empty",
             )
         return data
 
