@@ -50,7 +50,7 @@ class WishlistConsumerTest(TransactionTestCase):
         communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
-        post_values = {"name": "Test wish", "price": "10.0", "url": "http://example.com"}
+        post_values = {"name": "Test wish", "price": "10.0", "url": "http://example.com/"}
         data = {"type": "create_wish", "currentUser": str(self.user.id), "post_values": post_values, "objectId": None}
 
         await communicator.send_json_to(data)
@@ -81,7 +81,7 @@ class WishlistConsumerTest(TransactionTestCase):
                 "post_values": {
                     "name": "Test wish",
                     "price": "price is limited to 10 char",
-                    "url": "http://example.com",
+                    "url": "http://example.com/",
                 },
             }
         )
@@ -100,7 +100,7 @@ class WishlistConsumerTest(TransactionTestCase):
         await communicator.connect()
 
         wish = await sync_to_async(WishFactory)(wishlist_user=self.user)
-        post_values = {"name": "Test wish", "price": "10.0", "url": "http://example.com"}
+        post_values = {"name": "Test wish", "price": "10.0", "url": "http://example.com/"}
         data = {
             "type": "update_wish",
             "currentUser": str(self.user.id),
@@ -199,8 +199,32 @@ class WishlistConsumerTest(TransactionTestCase):
         await communicator.disconnect()
 
     @patch("api.consumers.get_all_users_wishes", return_value=[])
-    async def test_delete_wish_correctly(self, mock_get_all_users_wishes):
-        """Test that the WishlistConsumer deletes a wish correctly."""
+    async def test_delete_wish_mark_deleted_already_assigned(self, mock_get_all_users_wishes):
+        """Test that the WishlistConsumer only mark the wish as deleted if it has an assigned user."""
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
+        await communicator.connect()
+
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.user, assigned_user=self.second_user)
+        await communicator.send_json_to(
+            {"type": "delete_wish", "currentUser": str(self.user.id), "objectId": str(wish.id)}
+        )
+        response = await communicator.receive_json_from()
+
+        self.assertEqual(
+            json.loads(response),
+            {"type": "update_wishes", "data": [], "userToken": self.user.name, "action": "delete_wish"},
+        )
+
+        wish = await sync_to_async(Wish.objects.get)(id=wish.id)
+        self.assertTrue(wish.deleted)
+
+        self.assertTrue(mock_get_all_users_wishes.called_once())
+
+        await communicator.disconnect()
+
+    @patch("api.consumers.get_all_users_wishes", return_value=[])
+    async def test_delete_wish_mark_deleted_but_not_assigned(self, mock_get_all_users_wishes):
+        """Test that the WishlistConsumer completely deletes the wish if it has no assigned user."""
         communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
@@ -213,6 +237,37 @@ class WishlistConsumerTest(TransactionTestCase):
         self.assertEqual(
             json.loads(response),
             {"type": "update_wishes", "data": [], "userToken": self.user.name, "action": "delete_wish"},
+        )
+
+        with self.assertRaises(Wish.DoesNotExist):
+            await sync_to_async(Wish.objects.get)(id=wish.id)
+
+        self.assertTrue(mock_get_all_users_wishes.called_once())
+
+        await communicator.disconnect()
+
+    @patch("api.consumers.get_all_users_wishes", return_value=[])
+    async def test_delete_wish_mark_deleted_is_unassigned(self, mock_get_all_users_wishes):
+        """Test that when a user unassign a wish, and it was marked as deleted, it is completely deleted."""
+
+        # Second user took the wish and now unassigns himself
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.second_user.id}/")
+        await communicator.connect()
+
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.user, assigned_user=self.second_user, deleted=True)
+        post_values = {"assigned_user": None}
+        data = {
+            "type": "update_wish",
+            "currentUser": str(self.user.id),
+            "post_values": post_values,
+            "objectId": str(wish.id),
+        }
+        await communicator.send_json_to(data)
+        response = await communicator.receive_json_from()
+
+        self.assertEqual(
+            json.loads(response),
+            {"type": "update_wishes", "data": [], "userToken": self.second_user.name, "action": "update_wish"},
         )
 
         with self.assertRaises(Wish.DoesNotExist):
@@ -238,6 +293,64 @@ class WishlistConsumerTest(TransactionTestCase):
 
         self.assertEqual(
             json.loads(response), {"type": "error_message", "data": "Only the owner of the wish can delete it."}
+        )
+
+        await communicator.disconnect()
+
+    async def test_get_wishlist(self):
+        """Test that the WishlistConsumer sends the wishlist data to the user."""
+        # Create Wishes for the user
+        self.unassigned_wish = await sync_to_async(WishFactory)(name="A big Teddy Bear", wishlist_user=self.user)
+        # Second user took one of the wishes
+        self.assigned_wish = await sync_to_async(WishFactory)(
+            name="A pretty Barbie", wishlist_user=self.user, assigned_user=self.second_user
+        )
+
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
+        await communicator.connect()
+
+        await communicator.send_json_to({"type": "wishlist_data", "currentUser": str(self.user.id)})
+        response = await communicator.receive_json_from()
+
+        self.maxDiff = None
+        self.assertEqual(
+            json.loads(response),
+            {
+                "type": "wishlist_data",
+                "data": {
+                    "wishListId": str(self.wishlist.id),
+                    "name": "Test Wishlist",
+                    "allowSeeAssigned": False,
+                    "currentUser": "Bob",
+                    "isCurrentUserAdmin": False,
+                    "userWishes": [
+                        {
+                            "user": self.user.name,
+                            "wishes": [
+                                {
+                                    "name": self.unassigned_wish.name,
+                                    "deleted": False,
+                                    "price": None,
+                                    "url": None,
+                                    "id": str(self.unassigned_wish.id),
+                                    "assigned_user": None,
+                                },
+                                {
+                                    "name": self.assigned_wish.name,
+                                    "deleted": False,
+                                    "price": None,
+                                    "url": None,
+                                    "id": str(self.assigned_wish.id),
+                                    "assigned_user": self.second_user.name,
+                                },
+                            ],
+                        },
+                        {"user": self.second_user.name, "wishes": []},
+                    ],
+                },
+                "userToken": "Bob",
+                "action": "get_wishlist_data",
+            },
         )
 
         await communicator.disconnect()

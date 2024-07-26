@@ -10,7 +10,7 @@ from api.pydantic_models import (
     WishModel,
     WishModelUpdate,
 )
-from api.utils import get_all_users_wishes, do_update_wish
+from api.utils import do_update_wish, get_wishlist_data
 from core.models import Wish, WishList, WishListUser
 from core.pydantic_models import WishListUserFromModel
 
@@ -21,21 +21,9 @@ router = Router()
 @router.get("/wishlist", response={200: WishListModel})
 def get_wishlist(request: HttpRequest):
     """Get the wishlist users and corresponding wishes"""
-
     current_user = request.auth
 
-    wishlist = current_user.wishlist
-    # For each user, we need to collect their wishes
-    users_wishes = get_all_users_wishes(wishlist, as_dict=False)
-
-    return WishListModel(
-        wishListId=wishlist.id,
-        name=wishlist.wishlist_name,
-        allowSeeAssigned=wishlist.show_users,
-        currentUser=current_user.name,
-        isCurrentUserAdmin=current_user.is_admin,
-        userWishes=users_wishes,
-    )
+    return get_wishlist_data(current_user)
 
 
 @router.put("/wishlist", response={200: dict}, auth=None)
@@ -133,4 +121,4 @@ def delete_wish(request: HttpRequest, wish_id: str):
         return 401, {"error": {"message": error_message}}
 
     else:
-        instance.delete()
+        instance.mark_deleted()

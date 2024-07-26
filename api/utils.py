@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 
-from api.pydantic_models import WishModelUpdate, WishListUserModel
+from api.pydantic_models import WishModelUpdate, WishListUserModel, WishListModel
 from core.models import Wish, WishListUser, WishList
 
 
@@ -24,3 +24,19 @@ def get_all_users_wishes(wishlist: WishList, as_dict: bool = False):
         users_wishes.append(wish_schema.dict() if as_dict else wish_schema)
 
     return users_wishes
+
+
+def get_wishlist_data(user: WishListUser) -> WishListModel:
+    """Get the wishlist users and corresponding wishes"""
+    wishlist = user.wishlist
+    # For each user, we need to collect their wishes
+    users_wishes = get_all_users_wishes(wishlist, as_dict=False)
+
+    return WishListModel(
+        wishListId=wishlist.id,
+        name=wishlist.wishlist_name,
+        allowSeeAssigned=wishlist.show_users,
+        currentUser=user.name,
+        isCurrentUserAdmin=user.is_admin,
+        userWishes=users_wishes,
+    )

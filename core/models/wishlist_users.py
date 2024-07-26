@@ -27,6 +27,7 @@ class WishListUser(models.Model):
                     url=wish.url or None,
                     id=wish.id,
                     assigned_user=wish.assigned_user.name if wish.assigned_user else None,
+                    deleted=wish.deleted,
                 )
             )
         return wishes

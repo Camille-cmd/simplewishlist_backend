@@ -23,6 +23,9 @@ class Wish(models.Model):
         related_name="wishes",
         help_text="The wish belongs to this user",
     )
+    deleted = models.BooleanField(
+        default=False,
+    )
 
     def __str__(self):
         return f"Wish de {self.wishlist_user}"
@@ -77,7 +80,12 @@ class Wish(models.Model):
                         user = WishListUser.objects.get(id=value)
                         self.assigned_user = user
                     else:
-                        self.assigned_user = None
+                        # In case the wish was previously marked as deleted,
+                        # we can delete it now as it is no longer assigned to anyone
+                        if self.deleted:
+                            self.delete()
+                        else:
+                            self.assigned_user = None
 
                 except WishListUser.DoesNotExist:
                     raise SimpleWishlistValidationError(
@@ -98,6 +106,17 @@ class Wish(models.Model):
                 setattr(self, attr, value)
 
         self.save()
+
+    def mark_deleted(self):
+        """
+        If no user is assigned to the wish, we can delete it.
+        But if a user is assigned to it, just mark it as deleted, we want him/her to be able to see it.
+        """
+        if self.assigned_user is None:
+            self.delete()
+        else:
+            self.deleted = True
+            self.save()
 
     def can_be_deleted(self, current_user_id: uuid.UUID) -> tuple[bool, str]:
         """Check if the wish can be deleted"""

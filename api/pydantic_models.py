@@ -3,11 +3,20 @@ from typing import Any, Optional
 
 from ninja import Schema
 from ninja.schema import DjangoGetter
-from pydantic import UUID4, model_validator, AnyHttpUrl
+from pydantic import UUID4, model_validator
 from pydantic_core import PydanticCustomError
 
 
-class WishlistInitModel(Schema):
+class BaseSchema(Schema):
+    @model_validator(mode="before")
+    @classmethod
+    def empty_str_to_none(cls, data):
+        if isinstance(data, dict):
+            return {k: None if v == "" else v for k, v in data.items()}
+        return data
+
+
+class WishlistInitModel(BaseSchema):
     wishlist_name: str
     wishlist_admin_name: str
     allow_see_assigned: bool
@@ -27,20 +36,22 @@ class WishlistInitModel(Schema):
         return self
 
 
-class WishListWishModel(Schema):
+class WishListWishModel(BaseSchema):
     name: str
+    deleted: bool
     price: Optional[str] = None
     url: Optional[str] = None
     id: Optional[UUID4] = None
     assigned_user: Optional[str] = None
 
 
-class WishModel(Schema):
+class WishModel(BaseSchema):
     """Wish creation"""
 
     name: str
     price: Optional[str] = None
-    url: Optional[AnyHttpUrl] = None
+    # TODO: Add a URL validator
+    url: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -70,12 +81,12 @@ class WishModelUpdate(WishModel):
         return data
 
 
-class WishListUserModel(Schema):
+class WishListUserModel(BaseSchema):
     user: str
     wishes: Optional[list[WishListWishModel]] = []
 
 
-class WishListModel(Schema):
+class WishListModel(BaseSchema):
     wishListId: UUID4
     name: str
     allowSeeAssigned: bool
@@ -92,7 +103,7 @@ class ErrorMessage(Schema):
     error: Message
 
 
-class WebhookPayloadModel(Schema):
+class WebhookPayloadModel(BaseSchema):
     type: str
     currentUser: UUID4
     post_values: Optional[dict] = {}
