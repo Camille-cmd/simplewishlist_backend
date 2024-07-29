@@ -32,13 +32,14 @@ class TestWishListView(SimpleWishlistBaseTestCase):
             "name": self.wishlist.wishlist_name,
             "allowSeeAssigned": False,
             "currentUser": self.user.name,
-            "isCurrentUserAdmin": False,
+            "isCurrentUserAdmin": True,
             "userWishes": [
                 {
                     "user": self.user.name,
                     "wishes": [
                         {
                             "name": self.unassigned_wish.name,
+                            "deleted": False,
                             "price": self.unassigned_wish.price,
                             "url": self.unassigned_wish.url,
                             "id": str(self.unassigned_wish.id),
@@ -46,6 +47,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
                         },
                         {
                             "name": self.assigned_wish.name,
+                            "deleted": False,
                             "price": self.assigned_wish.price,
                             "url": self.assigned_wish.url,
                             "id": str(self.assigned_wish.id),
@@ -83,6 +85,25 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertTrue(WishList.objects.filter(wishlist_name=wishlist_name).exists())
         self.assertEquals(response.json(), expected_response)
+
+    def test_add_new_user_to_wishlist(self):
+        """Test that we can create a new user"""
+        data = {"name": "Paul"}
+        url = reverse("api-1.0.0:add_new_user_to_wishlist")
+        response = self.client.put(url, json.dumps(data))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(WishListUser.objects.filter(name="Paul").exists())
+
+    def test_add_new_user_to_wishlist_not_by_admin(self):
+        """Test that a user that is not an admin cannot add a new user"""
+        # Second user is not an admin
+        client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
+        data = {"name": "Paul"}
+        url = reverse("api-1.0.0:add_new_user_to_wishlist")
+        response = client.put(url, json.dumps(data))
+
+        self.assertEqual(response.status_code, 401)
 
 
 class TestWishView(SimpleWishlistBaseTestCase):

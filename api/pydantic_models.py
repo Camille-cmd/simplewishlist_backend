@@ -95,6 +95,13 @@ class WishListModel(BaseSchema):
     userWishes: list[WishListUserModel]
 
 
+class WishListUserCreate(BaseSchema):
+    """WishListUser based on the Wishlist model"""
+
+    name: str
+    is_active: bool = True
+
+
 class Message(Schema):
     message: str
 

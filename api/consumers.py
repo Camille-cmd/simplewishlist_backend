@@ -18,10 +18,8 @@ class WishlistConsumer(JsonWebsocketConsumer):
     def connect(self):
         """On connect, we get the user from the URL and join the group with the wishlist id"""
         # If the user is not found, we close the connection
-        print("Connected")
         try:
             self.current_user = WishListUser.objects.get(pk=self.scope["url_route"]["kwargs"]["wishlist_user"])
-            print(self.current_user.id)
         except WishListUser.DoesNotExist:
             self.send_individual_message({"type": "error_message", "data": "User not found"})
             self.close()

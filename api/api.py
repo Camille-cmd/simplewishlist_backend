@@ -9,6 +9,7 @@ from api.pydantic_models import (
     WishListModel,
     WishModel,
     WishModelUpdate,
+    WishListUserCreate,
 )
 from api.utils import do_update_wish, get_wishlist_data
 from core.models import Wish, WishList, WishListUser
@@ -81,6 +82,31 @@ def deactivate_user(request: HttpRequest, user_id: str):
         return 201, {"user": user.id}
     except WishListUser.DoesNotExist:
         return 400, {"error": {"message": "User not found"}}
+
+
+@router.put("/wishlist/users/add-new", response={200: WishListUserFromModel, 401: ErrorMessage})
+def add_new_user_to_wishlist(request: HttpRequest, payload: WishListUserCreate):
+    """
+    Add a new user to the wishlist.
+
+    Args:
+        request (HttpRequest): The HTTP request object containing the current user.
+        payload (WishListUserCreate): The data required to create a new wishlist user.
+
+    Returns:
+        dict: A dictionary containing the created user's information if successful.
+        ErrorMessage: An error message if the user is not an admin or if there is another error.
+
+    Raises:
+        SimpleWishlistValidationError: If there is a validation error during the creation of the user.
+    """
+    current_user = request.auth
+    if not current_user.is_admin:
+        return 401, {"error": {"message": "Only the admin can add a user"}}
+
+    wishlist = current_user.wishlist
+    created_user = WishListUser.objects.create(**payload.dict(), wishlist=wishlist)
+    return 200, created_user
 
 
 # WISH
