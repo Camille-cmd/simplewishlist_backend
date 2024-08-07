@@ -15,9 +15,15 @@ class WishList(models.Model):
         """Return the users of the wishlist that are still active and allowed to participate"""
         return self.wishlist_users.filter(is_active=True)
 
-    def get_users(self):
+    def get_users(self, exclude_users_ids: list = None):
         """Return all the users of the wishlist"""
-        return self.wishlist_users.all()
+        if exclude_users_ids is None:
+            exclude_users_ids = []
+        return self.wishlist_users.order_by("-is_active").exclude(id__in=exclude_users_ids)
+
+    def get_admin(self):
+        """Return the admin of the wishlist"""
+        return self.wishlist_users.get(is_admin=True)
 
     class Meta:
         verbose_name = "Wishlist"

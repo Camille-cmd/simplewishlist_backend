@@ -105,6 +105,14 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    def test_add_new_user_to_wishlist_duplicated(self):
+        """Test that we cannot create a new user with the same name"""
+        data = {"name": self.user.name}
+        url = reverse("api-1.0.0:add_new_user_to_wishlist")
+        response = self.client.put(url, json.dumps(data))
+
+        self.assertEqual(response.status_code, 400)
+
 
 class TestWishView(SimpleWishlistBaseTestCase):
     def setUp(self):

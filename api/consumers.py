@@ -80,7 +80,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         wish_payload = WishModelUpdate.model_validate(payload.post_values)
 
         # Update the wish
-        do_update_wish(self.current_user, payload.objectId, wish_payload)
+        do_update_wish(self.current_user, payload.object_id, wish_payload)
 
         action = "update_wish"
         if wish_payload.dict()["assigned_user"] is not None:
@@ -104,7 +104,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
 
     def delete_wish(self, payload: WebhookPayloadModel):
         """Delete a wish and send the updated wishes to the group"""
-        instance = get_object_or_404(Wish, pk=payload.objectId)
+        instance = get_object_or_404(Wish, pk=payload.object_id)
 
         can_be_deleted, error_message = instance.can_be_deleted(self.current_user.id)
         if not can_be_deleted:

@@ -4,6 +4,7 @@ from typing import Any, Optional
 from ninja import Schema
 from ninja.schema import DjangoGetter
 from pydantic import UUID4, model_validator
+from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
 
 
@@ -14,6 +15,10 @@ class BaseSchema(Schema):
         if isinstance(data, dict):
             return {k: None if v == "" else v for k, v in data.items()}
         return data
+
+    class Config(Schema.Config):
+        populate_by_name = True
+        alias_generator = to_camel
 
 
 class WishlistInitModel(BaseSchema):
@@ -64,23 +69,6 @@ class WishModel(BaseSchema):
         return data
 
 
-class WishModelUpdate(WishModel):
-    """Wish Update (all fields are optionals and we can add an assigned_user)"""
-
-    name: Optional[str] = None
-    assigned_user: Optional[str] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_whether_name_is_none(cls, data: DjangoGetter) -> Any:
-        if hasattr(data, "name") and data.name is None:
-            raise PydanticCustomError(
-                "none_value_not_allowed",
-                "Name can not be null nor empty",
-            )
-        return data
-
-
 class WishListUserModel(BaseSchema):
     user: str
     wishes: Optional[list[WishListWishModel]] = []
@@ -93,6 +81,11 @@ class WishListModel(BaseSchema):
     currentUser: str
     isCurrentUserAdmin: bool
     userWishes: list[WishListUserModel]
+
+
+class WishListSettingsData(BaseSchema):
+    wishlist_name: str
+    allow_see_assigned: bool
 
 
 class WishListUserCreate(BaseSchema):
@@ -114,6 +107,10 @@ class WebhookPayloadModel(BaseSchema):
     type: str
     currentUser: UUID4
     post_values: Optional[dict] = {}
-    objectId: Optional[UUID4] = None
+    object_id: Optional[UUID4] = None
+
+    class Config(Schema.Config):
+        alias_generator = to_camel
+        populate_by_name = True
 
     # todo validate if post_values is not None, then objectId should not be None
