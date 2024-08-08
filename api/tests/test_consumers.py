@@ -312,7 +312,6 @@ class WishlistConsumerTest(TransactionTestCase):
         await communicator.send_json_to({"type": "wishlist_data", "currentUser": str(self.user.id)})
         response = await communicator.receive_json_from()
 
-        self.maxDiff = None
         self.assertEqual(
             json.loads(response),
             {

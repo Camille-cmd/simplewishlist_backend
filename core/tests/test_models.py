@@ -188,3 +188,6 @@ class TestWishList(SimpleWishlistBaseTestCase):
         active_users = self.wishlist.get_active_users()
         self.assertIn(self.user, active_users)
         self.assertNotIn(self.inactive_user, active_users)
+
+    def test_get_admin(self):
+        self.assertEquals(self.wishlist.get_admin(), self.user)
