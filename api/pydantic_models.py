@@ -69,6 +69,23 @@ class WishModel(BaseSchema):
         return data
 
 
+class WishModelUpdate(WishModel):
+    """Wish Update (all fields are optionals and we can add an assigned_user)"""
+
+    name: Optional[str] = None
+    assigned_user: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_whether_name_is_none(cls, data: DjangoGetter) -> Any:
+        if hasattr(data, "name") and data.name is None:
+            raise PydanticCustomError(
+                "none_value_not_allowed",
+                "Name can not be null nor empty",
+            )
+        return data
+
+
 class WishListUserModel(BaseSchema):
     user: str
     wishes: Optional[list[WishListWishModel]] = []

@@ -16,7 +16,15 @@ router = Router()
 # WISHLIST
 @router.get("/wishlist/settings", response={200: WishListSettingsData}, by_alias=True)
 def get_wishlist_settings(request: HttpRequest):
-    """Get the wishlist main settings data"""
+    """
+    Get the wishlist settings for the current user.
+
+    Args:
+        request (HttpRequest): The HTTP request object containing the current user.
+
+    Returns:
+        dict: A dictionary containing the wishlist settings.
+    """
     current_user = request.auth
 
     wishlist = current_user.wishlist
@@ -29,7 +37,17 @@ def get_wishlist_settings(request: HttpRequest):
 
 @router.put("/wishlist", response={200: list[WishListUserFromModel]}, auth=None, by_alias=True)
 def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
-    """Create the wishlist with initial data"""
+    """
+    Create a new wishlist.
+
+    Args:
+        request (HttpRequest): The HTTP request object without authentication required.
+        payload (WishlistInitModel): The data required to create a new wishlist.
+
+    Returns:
+        list: The list of users created for the wishlist.
+        An error message if the payload is invalid.
+    """
 
     # Create the wishlist
     wishlist = WishList.objects.create(
@@ -54,13 +72,23 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
     return created_users
 
 
-@router.post("/wishlist/update", response={200: WishListSettingsData, 400: ErrorMessage}, by_alias=True)
+@router.post("/wishlist", response={200: WishListSettingsData, 401: ErrorMessage}, by_alias=True)
 def update_wishlist(request: HttpRequest, payload: WishListSettingsData):
-    """Update the wishlist with initial data"""
+    """
+    Update the wishlist settings.
+
+    Args:
+        request (HttpRequest): The HTTP request object containing the current user.
+        payload (WishListSettingsData): The data required to update the wishlist settings.
+
+    Returns:
+        dict: A dictionary containing the updated wishlist settings if successful.
+        ErrorMessage: An error message if the user is not an admin.
+    """
 
     current_user = request.auth
     if not current_user.is_admin:
-        return 400, {"error": {"message": "Only the admin can update the wishlist"}}
+        return 401, {"error": {"message": "Only the admin can update the wishlist"}}
 
     wishlist = current_user.wishlist
 
@@ -75,46 +103,84 @@ def update_wishlist(request: HttpRequest, payload: WishListSettingsData):
     )
 
 
-@router.get("/wishlist/users", response={201: list[WishListUserFromModel]}, by_alias=True)
+@router.get("/wishlist/users", response={200: list[WishListUserFromModel]}, by_alias=True)
 def get_wishlist_users(request: HttpRequest):
-    """Get all the users of the wishlist for the current user"""
+    """
+     Get all the users of the wishlist for the current user.
+
+    Args:
+        request (HttpRequest): The HTTP request object containing the current user.
+
+    Returns:
+        list: a list of users in the wishlist including the current user.
+    """
     current_user = request.auth
     wishlist = current_user.wishlist
 
     users = wishlist.get_users()
-    return 201, users
+    return 200, users
 
 
 @router.post(
-    "/wishlist/users/{user_id}/deactivate", response={201: WishListUserFromModel, 400: ErrorMessage}, by_alias=True
+    "/wishlist/users/{user_id}/deactivate",
+    response={200: WishListUserFromModel, 401: ErrorMessage, 404: ErrorMessage},
+    by_alias=True,
 )
 def deactivate_user(request: HttpRequest, user_id: str):
-    """Deactivate a user from the wishlist"""
+    """
+    Deactivate a user from the wishlist.
+
+    Args:
+        request (HttpRequest): The HTTP request object containing the current user.
+        user_id (str): The ID of the user to deactivate.
+
+    Returns:
+        dict: A dictionary containing the deactivated user's information if successful.
+        ErrorMessage: An error message if the user is not an admin, if the user is an admin, or if the user is not found.
+
+    Raises:
+        SimpleWishlistValidationError: If there is a validation error during the deactivation of the user.
+    """
     current_user = request.auth
     if not current_user.is_admin:
-        return 400, {"error": {"message": "Only the admin can deactivate a user"}}
+        return 401, {"error": {"message": "Only the admin can deactivate a user"}}
 
     wishlist = current_user.wishlist
 
     try:
         user = wishlist.wishlist_users.get(id=user_id)
         if user.is_admin:
-            return 400, {"error": {"message": "The admin can not be deactivated"}}
+            return 401, {"error": {"message": "The admin can not be deactivated"}}
         user.is_active = False
         user.save()
-        return 201, user
+        return 200, user
     except WishListUser.DoesNotExist:
-        return 400, {"error": {"message": "User not found"}}
+        return 404, {"error": {"message": "User not found"}}
 
 
 @router.post(
-    "/wishlist/users/{user_id}/activate", response={201: WishListUserFromModel, 400: ErrorMessage}, by_alias=True
+    "/wishlist/users/{user_id}/activate",
+    response={200: WishListUserFromModel, 401: ErrorMessage, 404: ErrorMessage},
+    by_alias=True,
 )
 def activate_user(request: HttpRequest, user_id: str):
-    """Activate a user from the wishlist"""
+    """
+    Activate a user from the wishlist.
+
+    Args:
+        request (HttpRequest): The HTTP request object containing the current user.
+        user_id (str): The ID of the user to activate.
+
+    Returns:
+        dict: A dictionary containing the activated user's information if successful.
+        ErrorMessage: An error message if the user is not an admin or if the user is not found.
+
+    Raises:
+        SimpleWishlistValidationError: If there is a validation error during the activation of the user.
+    """
     current_user = request.auth
     if not current_user.is_admin:
-        return 400, {"error": {"message": "Only the admin can activate a user"}}
+        return 401, {"error": {"message": "Only the admin can activate a user"}}
 
     wishlist = current_user.wishlist
 
@@ -122,14 +188,14 @@ def activate_user(request: HttpRequest, user_id: str):
         user = wishlist.wishlist_users.get(id=user_id)
         user.is_active = True
         user.save()
-        return 201, user
+        return 200, user
     except WishListUser.DoesNotExist:
-        return 400, {"error": {"message": "User not found"}}
+        return 404, {"error": {"message": "User not found"}}
 
 
 @router.put(
-    "/wishlist/users/add-new",
-    response={200: WishListUserFromModel, 401: ErrorMessage, 400: ErrorMessage},
+    "/wishlist/users",
+    response={201: WishListUserFromModel, 401: ErrorMessage, 400: ErrorMessage},
     by_alias=True,
 )
 def add_new_user_to_wishlist(request: HttpRequest, payload: WishListUserCreate):
@@ -156,11 +222,11 @@ def add_new_user_to_wishlist(request: HttpRequest, payload: WishListUserCreate):
 
     wishlist = current_user.wishlist
     created_user = WishListUser.objects.create(**payload.dict(), wishlist=wishlist)
-    return 200, created_user
+    return 201, created_user
 
 
 @router.post(
-    "/wishlist/users/{user_id}/update",
+    "/wishlist/users/{user_id}",
     response={200: WishListUserFromModel, 401: ErrorMessage, 400: ErrorMessage, 404: ErrorMessage},
     by_alias=True,
 )
@@ -184,6 +250,7 @@ def update_user_in_wishlist(request: HttpRequest, user_id: str, payload: WishLis
     if not current_user.is_admin:
         return 401, {"error": {"message": "Only the admin can update a user"}}
 
+    # Check if the user exists in the wishlist but exclude the user being updated, as the user can keep the same name
     if payload.name in current_user.wishlist.get_users(exclude_users_ids=[user_id]).values_list("name", flat=True):
         return 400, {"error": {"message": "User already exists in the wishlist"}}
 
