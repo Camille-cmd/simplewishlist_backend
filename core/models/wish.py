@@ -10,6 +10,7 @@ class Wish(models.Model):
     name = models.CharField(max_length=255)
     price = models.CharField(max_length=10, blank=True, null=True)
     url = models.URLField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
     assigned_user = models.ForeignKey(
         "WishListUser",
         on_delete=models.SET_NULL,

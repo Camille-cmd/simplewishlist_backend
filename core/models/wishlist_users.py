@@ -24,6 +24,7 @@ class WishListUser(models.Model):
                 WishListWishModel(
                     name=wish.name,
                     price=wish.price or None,
+                    description=wish.description or None,
                     url=wish.url or None,
                     id=wish.id,
                     assigned_user=wish.assigned_user.name if wish.assigned_user else None,

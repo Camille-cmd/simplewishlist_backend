@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 from ninja import Schema
 from ninja.schema import DjangoGetter
-from pydantic import UUID4, model_validator
+from pydantic import UUID4, model_validator, AnyUrl
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
 
@@ -46,6 +46,7 @@ class WishListWishModel(BaseSchema):
     deleted: bool
     price: Optional[str] = None
     url: Optional[str] = None
+    description: Optional[str] = None
     id: Optional[UUID4] = None
     assigned_user: Optional[str] = None
 
@@ -55,8 +56,8 @@ class WishModel(BaseSchema):
 
     name: str
     price: Optional[str] = None
-    # TODO: Add a URL validator
-    url: Optional[str] = None
+    url: Optional[AnyUrl] = None
+    description: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
