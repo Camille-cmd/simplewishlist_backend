@@ -1,7 +1,7 @@
 version = 1
 requires-python = ">=3.10"
 
-[[distribution]]
+[[package]]
 name = "simplewishlist"
 version = "0.0.1"
-source = "editable+."
+source = { virtual = "." }

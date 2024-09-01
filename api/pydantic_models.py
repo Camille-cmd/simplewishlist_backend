@@ -3,19 +3,13 @@ from typing import Any, Optional
 
 from ninja import Schema
 from ninja.schema import DjangoGetter
-from pydantic import UUID4, model_validator, AnyUrl
+from pydantic import UUID4, model_validator, AnyUrl, field_validator
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
+from pydantic_core.core_schema import ValidationInfo
 
 
 class BaseSchema(Schema):
-    @model_validator(mode="before")
-    @classmethod
-    def empty_str_to_none(cls, data):
-        if isinstance(data, dict):
-            return {k: None if v == "" else v for k, v in data.items()}
-        return data
-
     class Config(Schema.Config):
         populate_by_name = True
         alias_generator = to_camel
@@ -51,13 +45,19 @@ class WishListWishModel(BaseSchema):
     assigned_user: Optional[str] = None
 
 
-class WishModel(BaseSchema):
+class WishModel(Schema):
     """Wish creation"""
 
     name: str
     price: Optional[str] = None
     url: Optional[AnyUrl] = None
     description: Optional[str] = None
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def convert_empty_url_to_none(cls, url: AnyUrl | str, info: ValidationInfo) -> AnyUrl | None:
+        """Convert empty string to None to avoid validation error"""
+        return url if url else None
 
     @model_validator(mode="before")
     @classmethod

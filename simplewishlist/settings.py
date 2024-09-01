@@ -10,25 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import dotenv_values
+
+config = dotenv_values(".env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-89b_j(!s9$+l-!um-&6k#z%1ys$-)+_0+tu$w^tk@ztsvx%$fh"
+SECRET_KEY = config["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config["DEBUG"]
+SESSION_COOKIE_SECURE = config["SESSION_COOKIE_SECURE"]
+CSRF_COOKIE_SECURE = config["CSRF_COOKIE_SECURE"]
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config.get("ALLOWED_HOSTS", "").split(",")
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8000",
     "http://localhost:5173",
+    "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://127.0.0.1:5173",
 ]
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "api",
     "core",
+    "channels_redis",
 ]
 
 MIDDLEWARE = [
@@ -84,11 +87,10 @@ ASGI_APPLICATION = "simplewishlist.asgi.application"
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
-        # "BACKEND": "channels_redis.core.RedisChannelLayer",
-        # "CONFIG": {
-        #     "hosts": [("127.0.0.1", 6379)],
-        # },
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],
+        },
     },
 }
 
@@ -98,11 +100,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "simplewishlist",
-        "USER": "camille",
-        "PASSWORD": "password",
-        "HOST": "127.0.0.1",
-        "PORT": "5432",
+        "NAME": config["POSTGRES_DB"],
+        "USER": config["POSTGRES_USER"],
+        "PASSWORD": config["POSTGRES_PASSWORD"],
+        "HOST": config["POSTGRES_HOST"],
+        "PORT": config.get("POSTGRES_PORT", "5432"),
     }
 }
 
@@ -142,6 +144,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

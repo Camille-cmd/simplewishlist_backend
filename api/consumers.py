@@ -119,7 +119,10 @@ class WishlistConsumer(JsonWebsocketConsumer):
         """Send the updated wishes to the group"""
         users_wishes = get_all_users_wishes(self.wishlist, as_dict=True)
 
-        self.send_group_message("update_wishes", action, users_wishes)
+        # Needed to serialize the uuid
+        data = json.dumps(users_wishes, cls=DjangoJSONEncoder)
+
+        self.send_group_message("update_wishes", action, json.loads(data))
 
     # RESPONSES
     def send_group_message(self, type: str, action: str, data: dict | list | str):
