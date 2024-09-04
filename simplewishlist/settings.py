@@ -28,13 +28,7 @@ SESSION_COOKIE_SECURE = config["SESSION_COOKIE_SECURE"]
 CSRF_COOKIE_SECURE = config["CSRF_COOKIE_SECURE"]
 
 ALLOWED_HOSTS = config.get("ALLOWED_HOSTS", "").split(",")
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1:5173",
-]
-
+CORS_ALLOWED_ORIGINS = config.get("CORS_ALLOWED_ORIGINS", "").split(",")
 
 # Application definition
 

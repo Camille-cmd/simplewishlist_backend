@@ -12,7 +12,7 @@ python manage.py migrate
 echo "Starting server $DJANGO_ENV"
 if [ "$DJANGO_ENV" = "production" ]; then
   echo "Running Gunicorn"
-  exec gunicorn simplewishlist.wsgi:application --bind 0.0.0.0:8000 --workers 1 --log-level=info --log-file=/var/log/gunicorn.log
+  exec gunicorn simplewishlist.asgi:application --bind 0.0.0.0:8000 --workers 4 -k uvicorn.workers.UvicornWorker
 else
   echo "Running development server"
   python manage.py runserver 0.0.0.0:8000
