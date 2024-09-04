@@ -13,22 +13,22 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 
-config = dotenv_values(".env")
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config["SECRET_KEY"]
+SECRET_KEY = os.environ["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config["DEBUG"]
-SESSION_COOKIE_SECURE = config["SESSION_COOKIE_SECURE"]
-CSRF_COOKIE_SECURE = config["CSRF_COOKIE_SECURE"]
+DEBUG = os.environ["DEBUG"]
+SESSION_COOKIE_SECURE = os.environ["SESSION_COOKIE_SECURE"]
+CSRF_COOKIE_SECURE = os.environ["CSRF_COOKIE_SECURE"]
 
-ALLOWED_HOSTS = config.get("ALLOWED_HOSTS", "").split(",")
-CORS_ALLOWED_ORIGINS = config.get("CORS_ALLOWED_ORIGINS", "").split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
 
 # Application definition
 
@@ -94,11 +94,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config["POSTGRES_DB"],
-        "USER": config["POSTGRES_USER"],
-        "PASSWORD": config["POSTGRES_PASSWORD"],
-        "HOST": config["POSTGRES_HOST"],
-        "PORT": config.get("POSTGRES_PORT", "5432"),
+        "NAME": os.environ["POSTGRES_DB"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_HOST"],
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 
