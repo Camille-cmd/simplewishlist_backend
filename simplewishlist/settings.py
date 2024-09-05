@@ -23,15 +23,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ["SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ["DEBUG"]
-SESSION_COOKIE_SECURE = os.environ["SESSION_COOKIE_SECURE"]
-CSRF_COOKIE_SECURE = os.environ["CSRF_COOKIE_SECURE"]
+DEBUG = os.environ["DEBUG"] == "True"
+SESSION_COOKIE_SECURE = os.environ["SESSION_COOKIE_SECURE"] == "True"
+CSRF_COOKIE_SECURE = os.environ["CSRF_COOKIE_SECURE"] == "True"
+SECURE_SSL_REDIRECT = os.environ["SECURE_SSL_REDIRECT"] == "True"
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+# CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOW_ALL_ORIGINS = True
+
+ADMIN_URL = os.environ.get("ADMIN_URL", "admin")
 
 # Application definition
-
 INSTALLED_APPS = [
     "daphne",  # ASGI application server (use for websockets)
     "django.contrib.admin",
@@ -49,6 +53,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",

@@ -9,8 +9,10 @@ COPY requirements-dev.txt /app/requirements.txt
 # Install psycopg2-binary
 RUN apk add build-base libpq libpq-dev && apk add libffi-dev
 
+RUN pip install uv
+
 # Install all the dependencies listed in requirements.txt using the pip install
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --no-cache-dir -r requirements.txt
 
 RUN apk update \
     && apk upgrade \

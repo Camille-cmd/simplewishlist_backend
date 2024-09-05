@@ -2,6 +2,7 @@ from uuid import UUID
 
 from django.shortcuts import get_object_or_404
 from ninja import NinjaAPI
+from ninja.conf import settings
 from ninja.security import HttpBearer
 
 from api.api import router as api_router
@@ -17,7 +18,6 @@ class AuthBearer(HttpBearer):
             return None
 
 
-api = NinjaAPI(auth=AuthBearer())
-
+api = NinjaAPI(auth=AuthBearer(), docs_url="/docs" if settings.DEBUG else None)
 
 api.add_router("/v1/", api_router)
