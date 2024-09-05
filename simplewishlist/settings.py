@@ -26,12 +26,12 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 DEBUG = os.environ["DEBUG"] == "True"
 SESSION_COOKIE_SECURE = os.environ["SESSION_COOKIE_SECURE"] == "True"
 CSRF_COOKIE_SECURE = os.environ["CSRF_COOKIE_SECURE"] == "True"
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
 SECURE_SSL_REDIRECT = os.environ["SECURE_SSL_REDIRECT"] == "True"
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
-# CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
 
 ADMIN_URL = os.environ.get("ADMIN_URL", "admin")
 
