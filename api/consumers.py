@@ -1,13 +1,21 @@
 import json
+from typing import List
 
 from asgiref.sync import async_to_sync
+from channels.exceptions import StopConsumer
 from channels.generic.websocket import JsonWebsocketConsumer
-from django.core.serializers.json import DjangoJSONEncoder
 from django.shortcuts import get_object_or_404
+from pydantic import TypeAdapter
 
 from api.exceptions import SimpleWishlistValidationError
-from api.pydantic_models import WishModelUpdate, WebhookPayloadModel, WishModel
-from api.utils import get_all_users_wishes, do_update_wish, get_wishlist_data
+from api.pydantic_models import (
+    WishModelUpdate,
+    WebhookPayloadModel,
+    WishModel,
+    WishModelUpdateAssignUser,
+    WishListUserModel,
+)
+from api.utils import get_all_users_wishes, do_update_wish
 from core.models import WishListUser, Wish
 
 
@@ -20,33 +28,31 @@ class WishlistConsumer(JsonWebsocketConsumer):
         # If the user is not found, we close the connection
         try:
             self.current_user = WishListUser.objects.get(pk=self.scope["url_route"]["kwargs"]["wishlist_user"])
+
+            self.wishlist = self.current_user.wishlist
+
+            self.room_group_name = f"wishlist_{self.wishlist.id}"
+
+            # Join room group
+            async_to_sync(self.channel_layer.group_add)(self.room_group_name, self.channel_name)
+
+            self.accept("authorization")
+
         except WishListUser.DoesNotExist:
-            self.send_individual_message({"type": "error_message", "data": "User not found"})
-            self.close()
-
-        self.wishlist = self.current_user.wishlist
-
-        self.room_group_name = f"wishlist_{self.wishlist.id}"
-
-        # Join room group
-        async_to_sync(self.channel_layer.group_add)(self.room_group_name, self.channel_name)
-
-        self.accept()
+            self.close(reason="User not found")
 
     def disconnect(self, close_code):
         """On disconnect, we leave the group"""
-        # async_to_sync(self.channel_layer.group_discard)(self.room_group_name, self.channel_name)
+        raise StopConsumer()
 
-    def receive_json(self, content: dict, **kwargs):
+    def receive(self, text_data=None, bytes_data=None):
         """Receive a message from the group and process it"""
-
+        content = json.loads(text_data)
         try:
             # Validate the payload
             payload = WebhookPayloadModel.model_validate(content)
 
             match payload.type:
-                case "wishlist_data":
-                    self.get_wishlist_data()
                 case "update_wish":
                     self.update_wish(payload)
                 case "create_wish":
@@ -61,26 +67,18 @@ class WishlistConsumer(JsonWebsocketConsumer):
         except Exception as e:
             self.send_individual_message({"type": "error_message", "data": str(e)})
 
-    # ACTIONS
-    def get_wishlist_data(self):
-        """Get the wishlist data and send it to the user"""
-        data = get_wishlist_data(self.current_user)
-
-        self.send_individual_message(
-            {
-                "type": "wishlist_data",
-                "data": data.dict(),
-                "userToken": self.current_user.name,
-                "action": "get_wishlist_data",
-            }
-        )
-
     def update_wish(self, payload: WebhookPayloadModel):
         """Assign a wish to a user and send the updated wishes to the group"""
-        wish_payload = WishModelUpdate.model_validate(payload.post_values)
+        # We need to check if the only field is the assigned_user, meaning that we are changing the assigned user
+        changing_assigned_user = list(payload.post_values.keys()) == ["assignedUser"]
+        if changing_assigned_user:
+            # If the only field is the assigned_user, we can use the WishModelUpdateAssignUser
+            wish_payload = WishModelUpdateAssignUser.model_validate(payload.post_values)
+        else:
+            wish_payload = WishModelUpdate.model_validate(payload.post_values)
 
-        # Update the wish
-        do_update_wish(self.current_user, payload.object_id, wish_payload)
+        # Update the wish => if the assigned_user is changing, we need to keep the None values
+        do_update_wish(self.current_user, payload.object_id, wish_payload, exclude_unset=not changing_assigned_user)
 
         action = "update_wish"
         if wish_payload.dict()["assigned_user"] is not None:
@@ -117,12 +115,13 @@ class WishlistConsumer(JsonWebsocketConsumer):
 
     def _send_update_wishes(self, action: str = "update_wishes"):
         """Send the updated wishes to the group"""
-        users_wishes = get_all_users_wishes(self.wishlist, as_dict=True)
+        users_wishes = get_all_users_wishes(self.wishlist, current_user=self.current_user)
 
-        # Needed to serialize the uuid
-        data = json.dumps(users_wishes, cls=DjangoJSONEncoder)
+        # Convert the list of Pydantic models to a list of dictionaries
+        users_wishes_adapter = TypeAdapter(List[WishListUserModel])  # "Lambda" pydantic model
+        users_wishes = users_wishes_adapter.dump_python(users_wishes, by_alias=True, mode="json")
 
-        self.send_group_message("update_wishes", action, json.loads(data))
+        self.send_group_message("update_wishes", action, users_wishes)
 
     # RESPONSES
     def send_group_message(self, type: str, action: str, data: dict | list | str):
@@ -135,15 +134,15 @@ class WishlistConsumer(JsonWebsocketConsumer):
             {"type": type, "data": data, "userToken": self.current_user.name, "action": action},
         )
 
-    def send_individual_message(self, event: dict):
+    def send_individual_message(self, content: dict):
         # Use to send a message to the individual user and not the group
-        self.send_json(content=json.dumps(event, cls=DjangoJSONEncoder))
+        self.send_json(content=content)
 
-    def update_wishes(self, event: dict):
-        self.send_individual_message(event)
+    def update_wishes(self, content: dict):
+        self.send_individual_message(content)
 
-    def error_message(self, event: dict):
-        self.send_individual_message(event)
+    def error_message(self, content: dict):
+        self.send_individual_message(content)
 
-    def new_group_member_connection(self, event: dict):
-        self.send_individual_message(event)
+    def new_group_member_connection(self, content: dict):
+        self.send_individual_message(content)

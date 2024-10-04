@@ -1,4 +1,3 @@
-import json
 import random
 from unittest.mock import patch
 from uuid import UUID
@@ -38,8 +37,7 @@ class WishlistConsumerTest(TransactionTestCase):
         communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{str(fake_uuid)}/")
         await communicator.send_input({"type": "websocket.connect"})
         response = await communicator.receive_output(timeout=1)
-        response_json = json.loads(response["text"])
-        self.assertEqual(json.loads(response_json), {"type": "error_message", "data": "User not found"})
+        self.assertEqual(response, {"reason": "User not found", "type": "websocket.close"})
 
     @patch("api.consumers.get_all_users_wishes", return_value=[])
     async def test_create_wish_correctly(self, mock_get_all_users_wishes):
@@ -57,14 +55,14 @@ class WishlistConsumerTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertEqual(
-            json.loads(response),
+            response,
             {"type": "update_wishes", "data": [], "userToken": self.user.name, "action": "create_wish"},
         )
 
         wish_created = await sync_to_async(Wish.objects.get)(**post_values)
         self.assertIsNotNone(wish_created)
 
-        self.assertTrue(mock_get_all_users_wishes.called_once())
+        self.assertEqual(mock_get_all_users_wishes.call_count, 1)
 
         await communicator.disconnect()
 
@@ -87,9 +85,7 @@ class WishlistConsumerTest(TransactionTestCase):
         )
         response = await communicator.receive_json_from()
 
-        self.assertEqual(
-            json.loads(response), {"type": "error_message", "data": "value too long for type character varying(10)\n"}
-        )
+        self.assertEqual(response, {"type": "error_message", "data": "value too long for type character varying(10)\n"})
 
         await communicator.disconnect()
 
@@ -112,11 +108,10 @@ class WishlistConsumerTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertEqual(
-            json.loads(response),
+            response,
             {"type": "update_wishes", "data": [], "userToken": self.user.name, "action": "update_wish"},
         )
-
-        self.assertTrue(mock_get_all_users_wishes.called_once())
+        self.assertEqual(mock_get_all_users_wishes.call_count, 1)
 
         updated_wish = await sync_to_async(Wish.objects.get)(id=wish.id)
         self.assertEqual(updated_wish.name, post_values["name"])
@@ -144,16 +139,15 @@ class WishlistConsumerTest(TransactionTestCase):
         await communicator.send_json_to(data)
         response = await communicator.receive_json_from()
         self.assertEqual(
-            json.loads(response),
+            response,
             {"type": "update_wishes", "data": [], "userToken": self.user.name, "action": "change_wish_assigned_user"},
         )
 
-        self.assertTrue(mock_get_all_users_wishes.called_once())
+        self.assertEqual(mock_get_all_users_wishes.call_count, 1)
 
         await communicator.disconnect()
 
-    @patch("api.consumers.get_all_users_wishes", return_value=[])
-    async def test_update_wish_change_assign_user_unauthorised(self, mock_get_all_users_wishes):
+    async def test_update_wish_change_assign_user_unauthorised(self):
         """
         Test that the WishlistConsumer returns error message when trying to change a user unauthorised.
         """
@@ -173,11 +167,7 @@ class WishlistConsumerTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         # The assigned user is the owner of the wish, so the user can not change it
-        self.assertEqual(
-            json.loads(response), {"type": "error_message", "data": "Modifying assigned user unauthorized"}
-        )
-
-        self.assertTrue(mock_get_all_users_wishes.called_once())
+        self.assertEqual(response, {"type": "error_message", "data": "Modifying assigned user unauthorized"})
 
         await communicator.disconnect()
 
@@ -194,7 +184,7 @@ class WishlistConsumerTest(TransactionTestCase):
         )
         response = await communicator.receive_json_from()
 
-        self.assertEqual(json.loads(response), {"type": "error_message", "data": "No Wish matches the given query."})
+        self.assertEqual(response, {"type": "error_message", "data": "No Wish matches the given query."})
 
         await communicator.disconnect()
 
@@ -211,14 +201,14 @@ class WishlistConsumerTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertEqual(
-            json.loads(response),
+            response,
             {"type": "update_wishes", "data": [], "userToken": self.user.name, "action": "delete_wish"},
         )
 
         wish = await sync_to_async(Wish.objects.get)(id=wish.id)
         self.assertTrue(wish.deleted)
 
-        self.assertTrue(mock_get_all_users_wishes.called_once())
+        self.assertEqual(mock_get_all_users_wishes.call_count, 1)
 
         await communicator.disconnect()
 
@@ -235,14 +225,14 @@ class WishlistConsumerTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertEqual(
-            json.loads(response),
+            response,
             {"type": "update_wishes", "data": [], "userToken": self.user.name, "action": "delete_wish"},
         )
 
         with self.assertRaises(Wish.DoesNotExist):
             await sync_to_async(Wish.objects.get)(id=wish.id)
 
-        self.assertTrue(mock_get_all_users_wishes.called_once())
+        self.assertEqual(mock_get_all_users_wishes.call_count, 1)
 
         await communicator.disconnect()
 
@@ -266,14 +256,14 @@ class WishlistConsumerTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertEqual(
-            json.loads(response),
+            response,
             {"type": "update_wishes", "data": [], "userToken": self.second_user.name, "action": "update_wish"},
         )
 
         with self.assertRaises(Wish.DoesNotExist):
             await sync_to_async(Wish.objects.get)(id=wish.id)
 
-        self.assertTrue(mock_get_all_users_wishes.called_once())
+        self.assertEqual(mock_get_all_users_wishes.call_count, 1)
 
         await communicator.disconnect()
 
@@ -291,68 +281,7 @@ class WishlistConsumerTest(TransactionTestCase):
         )
         response = await communicator.receive_json_from()
 
-        self.assertEqual(
-            json.loads(response), {"type": "error_message", "data": "Only the owner of the wish can delete it."}
-        )
-
-        await communicator.disconnect()
-
-    async def test_get_wishlist(self):
-        """Test that the WishlistConsumer sends the wishlist data to the user."""
-        # Create Wishes for the user
-        self.unassigned_wish = await sync_to_async(WishFactory)(name="A big Teddy Bear", wishlist_user=self.user)
-        # Second user took one of the wishes
-        self.assigned_wish = await sync_to_async(WishFactory)(
-            name="A pretty Barbie", wishlist_user=self.user, assigned_user=self.second_user
-        )
-
-        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
-        await communicator.connect()
-
-        await communicator.send_json_to({"type": "wishlist_data", "currentUser": str(self.user.id)})
-        response = await communicator.receive_json_from()
-
-        self.assertEqual(
-            json.loads(response),
-            {
-                "type": "wishlist_data",
-                "data": {
-                    "wishListId": str(self.wishlist.id),
-                    "name": "Test Wishlist",
-                    "allowSeeAssigned": False,
-                    "currentUser": "Bob",
-                    "isCurrentUserAdmin": False,
-                    "userWishes": [
-                        {
-                            "user": self.user.name,
-                            "wishes": [
-                                {
-                                    "name": self.unassigned_wish.name,
-                                    "deleted": False,
-                                    "price": None,
-                                    "description": None,
-                                    "url": None,
-                                    "id": str(self.unassigned_wish.id),
-                                    "assigned_user": None,
-                                },
-                                {
-                                    "name": self.assigned_wish.name,
-                                    "deleted": False,
-                                    "price": None,
-                                    "description": None,
-                                    "url": None,
-                                    "id": str(self.assigned_wish.id),
-                                    "assigned_user": self.second_user.name,
-                                },
-                            ],
-                        },
-                        {"user": self.second_user.name, "wishes": []},
-                    ],
-                },
-                "userToken": "Bob",
-                "action": "get_wishlist_data",
-            },
-        )
+        self.assertEqual(response, {"type": "error_message", "data": "Only the owner of the wish can delete it."})
 
         await communicator.disconnect()
 
@@ -364,6 +293,6 @@ class WishlistConsumerTest(TransactionTestCase):
         await communicator.send_json_to({"type": "invalid_action", "currentUser": str(self.user.id)})
         response = await communicator.receive_json_from()
 
-        self.assertEqual(json.loads(response), {"type": "error_message", "data": "Invalid action"})
+        self.assertEqual(response, {"type": "error_message", "data": "Invalid action"})
 
         await communicator.disconnect()

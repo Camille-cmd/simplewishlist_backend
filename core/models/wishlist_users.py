@@ -16,9 +16,9 @@ class WishListUser(models.Model):
         return self.name
 
     def get_user_wishes(self) -> [WishListWishModel]:
-        """Return a Pydantic model containing the API response for User wishes"""
+        """Return a list of Pydantic model containing the API response for User wishes"""
         wishes = []
-        # We either return the wishes already assigned to someone, or not
+
         for wish in self.wishes.all():
             wishes.append(
                 WishListWishModel(

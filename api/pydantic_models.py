@@ -87,18 +87,24 @@ class WishModelUpdate(WishModel):
         return data
 
 
+class WishModelUpdateAssignUser(BaseSchema):
+    """Wish Update (only assigned_user is changing)"""
+
+    assigned_user: Optional[str] = None
+
+
 class WishListUserModel(BaseSchema):
     user: str
     wishes: Optional[list[WishListWishModel]] = []
 
 
 class WishListModel(BaseSchema):
-    wishListId: UUID4
+    wishlist_id: UUID4
     name: str
-    allowSeeAssigned: bool
-    currentUser: str
-    isCurrentUserAdmin: bool
-    userWishes: list[WishListUserModel]
+    allow_see_assigned: bool
+    current_user: str
+    is_current_user_admin: bool
+    user_wishes: list[WishListUserModel]
 
 
 class WishListSettingsData(BaseSchema):

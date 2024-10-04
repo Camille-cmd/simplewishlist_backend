@@ -32,12 +32,12 @@ class TestWishListUser(SimpleWishlistBaseTestCase):
 
         # Wishes no matter if they are assigned or not
         wishes = self.user.get_user_wishes()
-        self.assertEquals(len(wishes), 3)
+        self.assertEqual(len(wishes), 3)
         # Ordered by pk
         wishes = sorted(wishes, key=lambda x: x.name)
-        self.assertEquals(wishes[0].id, self.unassigned_wish.id)
-        self.assertEquals(wishes[1].id, second_wish.id)
-        self.assertEquals(wishes[2].id, self.assigned_wish.id)
+        self.assertEqual(wishes[0].id, self.unassigned_wish.id)
+        self.assertEqual(wishes[1].id, second_wish.id)
+        self.assertEqual(wishes[2].id, self.assigned_wish.id)
 
 
 class TestWish(SimpleWishlistBaseTestCase):
@@ -138,8 +138,8 @@ class TestWish(SimpleWishlistBaseTestCase):
 
         self.unassigned_wish.update(current_user_id=self.user.id, update_data=update_data)
         self.unassigned_wish.refresh_from_db()
-        self.assertEquals(self.unassigned_wish.name, update_data["name"])
-        self.assertEquals(self.unassigned_wish.price, "12€")  # should not have changed
+        self.assertEqual(self.unassigned_wish.name, update_data["name"])
+        self.assertEqual(self.unassigned_wish.price, "12€")  # should not have changed
 
     @patch.object(Wish, "validate_assigned_user", return_value=True)  # already tested
     def test_update_only_owner_can_update(self, validate_user_mock):
@@ -167,7 +167,7 @@ class TestWish(SimpleWishlistBaseTestCase):
             assigned_user=str(self.second_user.id),
         ).dict(exclude_unset=True)
         self.unassigned_wish.update(current_user_id=self.second_user.id, update_data=update_data)
-        self.assertEquals(self.unassigned_wish.assigned_user, self.second_user)
+        self.assertEqual(self.unassigned_wish.assigned_user, self.second_user)
 
     @patch.object(Wish, "validate_assigned_user", return_value=True)  # already tested
     def test_update_assign_to_none(self, validate_user_mock):
@@ -176,7 +176,7 @@ class TestWish(SimpleWishlistBaseTestCase):
             assigned_user=None,
         ).dict(exclude_unset=True)
         self.unassigned_wish.update(current_user_id=self.second_user.id, update_data=update_data)
-        self.assertEquals(self.unassigned_wish.assigned_user, None)
+        self.assertEqual(self.unassigned_wish.assigned_user, None)
 
 
 class TestWishList(SimpleWishlistBaseTestCase):
@@ -190,4 +190,4 @@ class TestWishList(SimpleWishlistBaseTestCase):
         self.assertNotIn(self.inactive_user, active_users)
 
     def test_get_admin(self):
-        self.assertEquals(self.wishlist.get_admin(), self.user)
+        self.assertEqual(self.wishlist.get_admin(), self.user)

@@ -6,11 +6,30 @@ from api.pydantic_models import (
     WishlistInitModel,
     WishListSettingsData,
     WishListUserCreate,
+    WishListModel,
 )
+from api.utils import get_wishlist_data
 from core.models import WishList, WishListUser
 from core.pydantic_models import WishListUserFromModel
 
 router = Router()
+
+
+@router.get("/wishlist", response={200: WishListModel}, by_alias=True)
+def get_wishlist(request: HttpRequest):
+    """
+    Get the wishlist for the current user.
+
+    Args:
+        request (HttpRequest): The HTTP request object containing the current user.
+
+    Returns:
+        list: A list of users in the wishlist including the current user.
+    """
+    current_user = request.auth
+    data = get_wishlist_data(current_user)
+
+    return 200, data
 
 
 # WISHLIST

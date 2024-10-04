@@ -12,7 +12,7 @@ RUN apk add build-base libpq libpq-dev && apk add libffi-dev
 RUN pip install uv
 
 # Install all the dependencies listed in requirements.txt using the pip install
-RUN uv pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system --no-cache-dir -r requirements.txt
 
 RUN apk update \
     && apk upgrade \

@@ -26,12 +26,13 @@ SECRET_KEY = os.environ["SECRET_KEY"]
 DEBUG = os.environ["DEBUG"] == "True"
 SESSION_COOKIE_SECURE = os.environ["SESSION_COOKIE_SECURE"] == "True"
 CSRF_COOKIE_SECURE = os.environ["CSRF_COOKIE_SECURE"] == "True"
-CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if CSRF_COOKIE_SECURE else []
 SECURE_SSL_REDIRECT = os.environ["SECURE_SSL_REDIRECT"] == "True"
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOW_ALL_ORIGINS = True
 
 ADMIN_URL = os.environ.get("ADMIN_URL", "admin")
 
@@ -51,17 +52,7 @@ INSTALLED_APPS = [
     "channels_redis",
 ]
 
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-]
+# MIDDLEWARE ARE DIFFERENT IN PROD AND DEV SETTINGS
 
 ROOT_URLCONF = "simplewishlist.urls"
 

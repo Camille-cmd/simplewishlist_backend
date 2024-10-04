@@ -33,7 +33,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
             "allowSeeAssigned": False,
         }
 
-        self.assertEquals(response.json(), expected_data)
+        self.assertEqual(response.json(), expected_data)
 
     def test_put_wishlist(self):
         """Test that we can create the wishlist"""
@@ -68,7 +68,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         ]
 
         self.assertTrue(WishList.objects.filter(wishlist_name=wishlist_name).exists())
-        self.assertEquals(response.json(), expected_response)
+        self.assertEqual(response.json(), expected_response)
 
     def test_put_wishlist_duplicated_names(self):
         """Test that we cannot create a wishlist with duplicated names"""
@@ -95,7 +95,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         # The response should return the new data
-        self.assertEquals(response.json(), {"wishlistName": "New Wishlist Name", "allowSeeAssigned": True})
+        self.assertEqual(response.json(), {"wishlistName": "New Wishlist Name", "allowSeeAssigned": True})
 
     def test_update_wishlist_not_admin(self):
         """Test that a non-admin cannot update the wishlist"""
@@ -129,7 +129,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
                 "isActive": True,
             },
         ]
-        self.assertEquals(response.json(), expected_data)
+        self.assertEqual(response.json(), expected_data)
 
     def test_deactivate_user(self):
         """Test that we can deactivate a user"""
@@ -239,7 +239,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         response = self.client.post(url, data=json.dumps(data), content_type="application/json")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEquals(
+        self.assertEqual(
             response.json(), {"id": str(self.user.id), "name": "New Name", "isAdmin": True, "isActive": True}
         )
 
@@ -277,6 +277,6 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         response = self.client.post(url, data=json.dumps(data), content_type="application/json")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEquals(
+        self.assertEqual(
             response.json(), {"id": str(self.user.id), "name": self.user.name, "isAdmin": True, "isActive": True}
         )
