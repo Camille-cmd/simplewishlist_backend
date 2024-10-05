@@ -1,4 +1,3 @@
-import json
 from typing import List
 
 from asgiref.sync import async_to_sync
@@ -45,9 +44,8 @@ class WishlistConsumer(JsonWebsocketConsumer):
         """On disconnect, we leave the group"""
         raise StopConsumer()
 
-    def receive(self, text_data=None, bytes_data=None):
+    def receive_json(self, content: dict, **kwargs):
         """Receive a message from the group and process it"""
-        content = json.loads(text_data)
         try:
             # Validate the payload
             payload = WebhookPayloadModel.model_validate(content)
