@@ -81,12 +81,13 @@ class Wish(models.Model):
                         user = WishListUser.objects.get(id=value)
                         self.assigned_user = user
                     else:
+                        self.assigned_user = None
                         # In case the wish was previously marked as deleted,
                         # we can delete it now as it is no longer assigned to anyone
                         if self.deleted:
                             self.delete()
-                        else:
-                            self.assigned_user = None
+                            # Return now we do not want to save
+                            return
 
                 except WishListUser.DoesNotExist:
                     raise SimpleWishlistValidationError(

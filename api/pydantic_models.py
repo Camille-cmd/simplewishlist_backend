@@ -39,7 +39,7 @@ class WishListWishModel(BaseSchema):
     name: str
     deleted: bool
     price: Optional[str] = None
-    url: Optional[str] = None
+    url: Optional[AnyUrl] = None
     description: Optional[str] = None
     id: Optional[UUID4] = None
     assigned_user: Optional[str] = None
@@ -97,6 +97,16 @@ class WishListUserModel(BaseSchema):
     user: str
     wishes: Optional[list[WishListWishModel]] = []
 
+
+class UserWishDataModel(BaseSchema):
+    user: str
+    wish: WishListWishModel
+
+
+class UserDeletedWishDataModel(BaseSchema):
+    user: str
+    wish_id: UUID4
+    assigned_user: Optional[str] = None
 
 class WishListModel(BaseSchema):
     wishlist_id: UUID4

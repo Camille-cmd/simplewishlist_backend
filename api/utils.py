@@ -4,7 +4,7 @@ from api.pydantic_models import WishModelUpdate, WishListUserModel, WishListMode
 from core.models import Wish, WishListUser, WishList
 
 
-def do_update_wish(current_user: WishListUser, wish_id: int, payload: WishModelUpdate, exclude_unset: bool = True):
+def do_update_wish(current_user: WishListUser, wish_id: int, payload: WishModelUpdate, exclude_unset: bool = True) -> Wish:
     """
     Update a wish from a wish id
 
@@ -17,6 +17,8 @@ def do_update_wish(current_user: WishListUser, wish_id: int, payload: WishModelU
     instance = get_object_or_404(Wish, pk=wish_id)
 
     instance.update(current_user_id=current_user.id, update_data=payload.dict(exclude_unset=exclude_unset))
+
+    return instance
 
 
 def get_all_users_wishes(wishlist: WishList, current_user: WishListUser) -> list[WishListUserModel]:

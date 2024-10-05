@@ -1,4 +1,5 @@
 from typing import List
+from uuid import UUID
 
 from asgiref.sync import async_to_sync
 from channels.exceptions import StopConsumer
@@ -12,7 +13,7 @@ from api.pydantic_models import (
     WebhookPayloadModel,
     WishModel,
     WishModelUpdateAssignUser,
-    WishListUserModel,
+    WishListWishModel, UserWishDataModel, UserDeletedWishDataModel,
 )
 from api.utils import get_all_users_wishes, do_update_wish
 from core.models import WishListUser, Wish
@@ -76,14 +77,36 @@ class WishlistConsumer(JsonWebsocketConsumer):
             wish_payload = WishModelUpdate.model_validate(payload.post_values)
 
         # Update the wish => if the assigned_user is changing, we need to keep the None values
-        do_update_wish(self.current_user, payload.object_id, wish_payload, exclude_unset=not changing_assigned_user)
+        updated_wish = do_update_wish(
+            self.current_user, payload.object_id, wish_payload, exclude_unset=not changing_assigned_user
+        )
+
+        # When we un-assign a deleted wish, this is a permanent deletion
+        # and the wish was completely deleted during do_update_wish
+        if changing_assigned_user and updated_wish.deleted:
+            # Prepare data in case the wish was deleted
+            deleted_wish_data = {
+                "wish_id": payload.object_id,
+                "wish_user_name": updated_wish.wishlist_user.name,
+                "assigned_user": None
+            }
+            # Try to update, if the object no longer exists, it will return None
+            try:
+                updated_wish = updated_wish.refresh_from_db()
+            except Wish.DoesNotExist:
+                self._send_updated_wish(
+                    wish=None,  # handle delete cases with just the wish_id (it will be displayed as deleted)
+                    action="delete_wish",
+                    deleted_wish_data=deleted_wish_data
+                )
+                return
 
         action = "update_wish"
         if wish_payload.dict()["assigned_user"] is not None:
             action = "change_wish_assigned_user"
 
         # Send the updated wishes to the groups
-        self._send_update_wishes(action=action)
+        self._send_updated_wish(wish=updated_wish, action=action)
 
     def create_wish(self, payload: WebhookPayloadModel):
         """Create a wish and send the updated wishes to the group"""
@@ -93,15 +116,21 @@ class WishlistConsumer(JsonWebsocketConsumer):
         wish_data = wish_payload.dict()
         wish_data.update({"wishlist_user": self.current_user})
 
-        Wish.objects.create(**wish_data)
+        created_wish = Wish.objects.create(**wish_data)
 
         # Send the updated wishes to the groups
-        self._send_update_wishes(action="create_wish")
+        self._send_updated_wish(wish=created_wish, action="create_wish")
 
     def delete_wish(self, payload: WebhookPayloadModel):
         """Delete a wish and send the updated wishes to the group"""
         instance = get_object_or_404(Wish, pk=payload.object_id)
-
+        wish_user_name = instance.wishlist_user.name
+        assigned_user = instance.assigned_user.name if instance.assigned_user else None
+        deleted_wish_data = {
+            "wish_id": instance.id,
+            "wish_user_name": wish_user_name,
+            "assigned_user": assigned_user
+        }
         can_be_deleted, error_message = instance.can_be_deleted(self.current_user.id)
         if not can_be_deleted:
             raise SimpleWishlistValidationError(model="Wish", field=None, message=error_message)
@@ -109,17 +138,35 @@ class WishlistConsumer(JsonWebsocketConsumer):
         instance.mark_deleted()
 
         # Send the updated wishes to the groups
-        self._send_update_wishes(action="delete_wish")
+        self._send_updated_wish(
+            wish=None,  # handle delete cases with just the wish_id (it will be displayed as deleted)
+            action="delete_wish",
+            deleted_wish_data=deleted_wish_data
+        )
 
-    def _send_update_wishes(self, action: str = "update_wishes"):
+    def _send_updated_wish(self, wish: Wish | None, action: str = "update_wish", deleted_wish_data: dict = None):
         """Send the updated wishes to the group"""
-        users_wishes = get_all_users_wishes(self.wishlist, current_user=self.current_user)
+        if action == "delete_wish":
+            user_wish_data = UserDeletedWishDataModel(
+                user=deleted_wish_data["wish_user_name"],
+                wish_id=deleted_wish_data["wish_id"],
+                assigned_user=deleted_wish_data["assigned_user"]
+            )
+        else:
+            wish_data = WishListWishModel(
+                name=wish.name,
+                price=wish.price or None,
+                description=wish.description or None,
+                url=wish.url or None,
+                id=wish.id,
+                assigned_user=wish.assigned_user.name if wish.assigned_user else None,
+                deleted=wish.deleted,
+            )
+            user_wish_data = UserWishDataModel(user=wish.wishlist_user.name, wish=wish_data)
 
-        # Convert the list of Pydantic models to a list of dictionaries
-        users_wishes_adapter = TypeAdapter(List[WishListUserModel])  # "Lambda" pydantic model
-        users_wishes = users_wishes_adapter.dump_python(users_wishes, by_alias=True, mode="json")
+        user_wish_data_dumped = user_wish_data.model_dump(by_alias=True, mode="json")
 
-        self.send_group_message("update_wishes", action, users_wishes)
+        self.send_group_message("updated_wish", action, user_wish_data_dumped)
 
     # RESPONSES
     def send_group_message(self, type: str, action: str, data: dict | list | str):
@@ -136,7 +183,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         # Use to send a message to the individual user and not the group
         self.send_json(content=content)
 
-    def update_wishes(self, content: dict):
+    def updated_wish(self, content: dict):
         self.send_individual_message(content)
 
     def error_message(self, content: dict):
