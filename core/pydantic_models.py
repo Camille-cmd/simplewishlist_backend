@@ -12,3 +12,12 @@ class WishListUserFromModel(ModelSchema):
     class Config(Schema.Config):
         populate_by_name = True
         alias_generator = to_camel
+
+
+class WishListSettingHandleUsersData(Schema):
+    wishlist_name: str
+    users: list[WishListUserFromModel]
+
+    class Config(Schema.Config):
+        populate_by_name = True
+        alias_generator = to_camel

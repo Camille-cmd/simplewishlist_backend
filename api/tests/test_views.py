@@ -115,20 +115,23 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        expected_data = [
-            {
-                "id": str(self.second_user.id),
-                "name": self.second_user.name,
-                "isAdmin": False,
-                "isActive": True,
-            },
-            {
-                "id": str(self.user.id),
-                "name": self.user.name,
-                "isAdmin": True,
-                "isActive": True,
-            },
-        ]
+        expected_data = {
+            "wishlistName": self.wishlist.wishlist_name,
+            "users": [
+                {
+                    "id": str(self.second_user.id),
+                    "name": self.second_user.name,
+                    "isAdmin": False,
+                    "isActive": True,
+                },
+                {
+                    "id": str(self.user.id),
+                    "name": self.user.name,
+                    "isAdmin": True,
+                    "isActive": True,
+                },
+            ],
+        }
         self.assertEqual(response.json(), expected_data)
 
     def test_deactivate_user(self):

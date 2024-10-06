@@ -10,7 +10,7 @@ from api.pydantic_models import (
 )
 from api.utils import get_wishlist_data
 from core.models import WishList, WishListUser
-from core.pydantic_models import WishListUserFromModel
+from core.pydantic_models import WishListUserFromModel, WishListSettingHandleUsersData
 
 router = Router()
 
@@ -122,7 +122,7 @@ def update_wishlist(request: HttpRequest, payload: WishListSettingsData):
     )
 
 
-@router.get("/wishlist/users", response={200: list[WishListUserFromModel]}, by_alias=True)
+@router.get("/wishlist/users", response={200: WishListSettingHandleUsersData}, by_alias=True)
 def get_wishlist_users(request: HttpRequest):
     """
      Get all the users of the wishlist for the current user.
@@ -137,7 +137,12 @@ def get_wishlist_users(request: HttpRequest):
     wishlist = current_user.wishlist
 
     users = wishlist.get_users()
-    return 200, users
+
+    users_data = []
+    for user in users:
+        users_data.append(WishListUserFromModel.from_orm(user))
+
+    return 200, WishListSettingHandleUsersData(wishlist_name=wishlist.wishlist_name, users=users_data)
 
 
 @router.post(

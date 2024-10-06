@@ -109,7 +109,7 @@ class WishlistConsumerTest(TransactionTestCase):
             response,
             {
                 "type": "error_message",
-                "data": "value too long for type character varying(10)\n",
+                "data": "value too long for type character varying(15)\n",
             },
         )
 

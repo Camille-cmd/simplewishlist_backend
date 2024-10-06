@@ -151,8 +151,4 @@ class WebhookPayloadModel(BaseSchema):
     post_values: Optional[dict] = {}
     object_id: Optional[UUID4] = None
 
-    class Config(Schema.Config):
-        alias_generator = to_camel
-        populate_by_name = True
-
     # todo validate if post_values is not None, then objectId should not be None
