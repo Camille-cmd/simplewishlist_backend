@@ -48,7 +48,8 @@ class WishListWishModel(BaseSchema):
     def serialize_url(self, url: AnyUrl):
         # Pydantic does not serialize AnyUrl into str.
         # We have to do it here for now.
-        return str(url)
+        if url:
+            return str(url)
 
 
 class WishModel(Schema):
