@@ -8,7 +8,7 @@ from api.exceptions import SimpleWishlistValidationError
 class Wish(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
-    price = models.CharField(max_length=10, blank=True, null=True)
+    price = models.CharField(max_length=15, blank=True, null=True)
     url = models.URLField(blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     assigned_user = models.ForeignKey(
