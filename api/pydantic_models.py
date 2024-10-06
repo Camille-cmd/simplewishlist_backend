@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 from ninja import Schema
 from ninja.schema import DjangoGetter
-from pydantic import UUID4, model_validator, AnyUrl, field_validator
+from pydantic import UUID4, model_validator, AnyUrl, field_validator, field_serializer
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
 from pydantic_core.core_schema import ValidationInfo
@@ -43,6 +43,12 @@ class WishListWishModel(BaseSchema):
     description: Optional[str] = None
     id: Optional[UUID4] = None
     assigned_user: Optional[str] = None
+
+    @field_serializer("url")
+    def serialize_url(self, url: AnyUrl):
+        # Pydantic does not serialize AnyUrl into str.
+        # We have to do it here for now.
+        return str(url)
 
 
 class WishModel(Schema):
