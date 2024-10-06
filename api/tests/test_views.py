@@ -127,7 +127,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
                 "name": self.user.name,
                 "isAdmin": True,
                 "isActive": True,
-            }
+            },
         ]
         self.assertEqual(response.json(), expected_data)
 

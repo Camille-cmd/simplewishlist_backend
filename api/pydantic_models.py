@@ -108,6 +108,7 @@ class UserDeletedWishDataModel(BaseSchema):
     wish_id: UUID4
     assigned_user: Optional[str] = None
 
+
 class WishListModel(BaseSchema):
     wishlist_id: UUID4
     name: str

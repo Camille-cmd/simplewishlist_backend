@@ -22,9 +22,7 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_connects(self):
         """Test that the WishlistConsumer successfully connects."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
 
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
@@ -35,23 +33,17 @@ class WishlistConsumerTest(TransactionTestCase):
         """Test that the WishlistConsumer rejects an unauthorized user."""
         # Connect with a non-existing user
         fake_uuid = UUID(int=random.getrandbits(128), version=4)
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{str(fake_uuid)}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{str(fake_uuid)}/")
         await communicator.send_input({"type": "websocket.connect"})
         response = await communicator.receive_output(timeout=1)
-        self.assertEqual(
-            response, {"reason": "User not found", "type": "websocket.close"}
-        )
+        self.assertEqual(response, {"reason": "User not found", "type": "websocket.close"})
 
     async def test_create_wish_correctly(self):
         """
         Test that the WishlistConsumer handles a create wish message correctly.
         get_all_users_wishes is mocked because it is already tested in the test_get_wishlist test.
         """
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
         post_values = {
@@ -96,9 +88,7 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_create_wish_invalid_data(self):
         """Test that the WishlistConsumer sends an error message when receiving invalid data."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
         # Invalid data
@@ -127,9 +117,7 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_update_wish_correctly(self):
         """Test that the WishlistConsumer updates a wish correctly."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
         wish = await sync_to_async(WishFactory)(wishlist_user=self.user)
@@ -178,9 +166,7 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_update_wish_assign_user(self):
         """Test that the WishlistConsumer updates a wish's assigned user correctly."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
         # User takes second user's wish
@@ -223,9 +209,7 @@ class WishlistConsumerTest(TransactionTestCase):
         """
         Test that the WishlistConsumer returns error message when trying to change a user unauthorised.
         """
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
         wish = await sync_to_async(WishFactory)(wishlist_user=self.user)
@@ -250,9 +234,7 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_delete_wish_no_matching_wish(self):
         """Test that the WishlistConsumer sends an error message when trying to delete a non-existing wish."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
 
@@ -276,14 +258,10 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_delete_wish_mark_deleted_already_assigned(self):
         """Test that the WishlistConsumer only mark the wish as deleted if it has an assigned user."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
-        wish = await sync_to_async(WishFactory)(
-            wishlist_user=self.user, assigned_user=self.second_user
-        )
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.user, assigned_user=self.second_user)
         await communicator.send_json_to(
             {
                 "type": "delete_wish",
@@ -314,9 +292,7 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_delete_wish_mark_deleted_but_not_assigned(self):
         """Test that the WishlistConsumer completely deletes the wish if it has no assigned user."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
         wish = await sync_to_async(WishFactory)(wishlist_user=self.user)
@@ -348,14 +324,10 @@ class WishlistConsumerTest(TransactionTestCase):
         """Test that when a user unassign a wish, and it was marked as deleted, it is completely deleted."""
 
         # Second user took the wish and now unassigns himself
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.second_user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.second_user.id}/")
         await communicator.connect()
 
-        wish = await sync_to_async(WishFactory)(
-            wishlist_user=self.user, assigned_user=self.second_user, deleted=True
-        )
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.user, assigned_user=self.second_user, deleted=True)
         post_values = {"assignedUser": None}
         data = {
             "type": "update_wish",
@@ -385,9 +357,7 @@ class WishlistConsumerTest(TransactionTestCase):
         """
         Test that the WishlistConsumer sends an error message when trying to delete a wish that can not be deleted.
         """
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
         wish = await sync_to_async(WishFactory)(wishlist_user=self.second_user)
@@ -413,14 +383,10 @@ class WishlistConsumerTest(TransactionTestCase):
 
     async def test_invalid_action(self):
         """Test that the WishlistConsumer sends an error message when receiving an invalid action."""
-        communicator = WebsocketCommunicator(
-            self.application, f"/ws/wishlist/{self.user.id}/"
-        )
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
         await communicator.connect()
 
-        await communicator.send_json_to(
-            {"type": "invalid_action", "currentUser": str(self.user.id)}
-        )
+        await communicator.send_json_to({"type": "invalid_action", "currentUser": str(self.user.id)})
         response = await communicator.receive_json_from()
 
         self.assertEqual(response, {"type": "error_message", "data": "Invalid action"})
