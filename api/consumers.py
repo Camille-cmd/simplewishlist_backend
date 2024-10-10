@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from asgiref.sync import async_to_sync
 from channels.exceptions import StopConsumer
 from channels.generic.websocket import JsonWebsocketConsumer
@@ -20,6 +22,8 @@ from core.models import WishListUser, Wish
 class WishlistConsumer(JsonWebsocketConsumer):
     current_user = None
     wishlist = None
+    room_group_name = None
+    room_connected_users = defaultdict(set)
 
     def connect(self):
         """On connect, we get the user from the URL and join the group with the wishlist id"""
@@ -36,11 +40,30 @@ class WishlistConsumer(JsonWebsocketConsumer):
 
             self.accept("authorization")
 
+            # Alert the group that a new user has connected
+            self.room_connected_users[self.room_group_name].add(self.current_user.name)
+            self.send_group_message(
+                "new_group_member_connection",
+                "new_group_member_connection",
+                list(self.room_connected_users[self.room_group_name]),
+            )
+
         except WishListUser.DoesNotExist:
             self.close(reason="User not found")
 
     def disconnect(self, close_code):
         """On disconnect, we leave the group"""
+        # Handle user disconnection follow up
+        self.room_connected_users[self.room_group_name].remove(self.current_user.name)
+        # Send the updated list of connected users to the group
+        self.send_group_message(
+            "group_member_disconnected",
+            "group_member_disconnected",
+            list(self.room_connected_users[self.room_group_name]),
+        )
+
+        # Leave room group
+        async_to_sync(self.channel_layer.group_discard)(self.room_group_name, self.channel_name)
         raise StopConsumer()
 
     def receive_json(self, content: dict, **kwargs):
@@ -184,4 +207,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
         self.send_individual_message(content)
 
     def new_group_member_connection(self, content: dict):
+        self.send_individual_message(content)
+
+    def group_member_disconnected(self, content: dict):
         self.send_individual_message(content)
