@@ -71,9 +71,15 @@ jobs:
       - name: Run Tests
         run: |
           python manage.py test
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
       - name: Lint code with Ruff
         run: ruff check --output-format=github --target-version=py39
 
       - name: Check code formatting with Ruff
         run: ruff format --diff --target-version=py39
+
+      - name: Bandit security check
+        run: bandit -r .
