@@ -6,3 +6,4 @@
 .idea/
 .ruff_cache
 htmlcov/
+.github/
