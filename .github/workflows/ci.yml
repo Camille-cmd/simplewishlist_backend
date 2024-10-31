@@ -3,12 +3,15 @@ name: Django CI
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - "**.md"
   pull_request:
-    branches: [ "main" ]
+    paths-ignore:
+      - "**.md"
 
 
 jobs:
-  build:
+  tests_and_lint:
 
     runs-on: ubuntu-latest
 
@@ -57,6 +60,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # When dealing with pull requests, this ensures that we check out the
+          # actual commit and not the merge commit from the PR.
+          # See: https://github.com/actions/checkout#Checkout-pull-request-HEAD-commit-instead-of-merge-commit
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -83,3 +92,58 @@ jobs:
 
       - name: Bandit security check
         run: bandit -r .
+
+  build:
+    needs: tests_and_lint
+
+    runs-on: ubuntu-latest
+    # Only build from the default branch.
+    if: github.ref_name == github.event.repository.default_branch
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/simplewishlist-backend:latest
+          file: ./Dockerfile.production
+
+  deploy:
+    needs: [tests_and_lint, build]
+
+    runs-on: ubuntu-latest
+
+    # Only deploy from the default branch.
+    if: github.ref_name == github.event.repository.default_branch
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/private.key
+          sudo chmod 600 ~/.ssh/private.key
+          echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{secrets.SSH_DEPLOY_KEY}}
+          SSH_KNOWN_HOSTS: ${{secrets.SSH_KNOWN_HOSTS}}
+
+      - name: Deploy
+        # We just need to ssh into the server to trigger the deployment
+        run: |
+          ssh -T -i ~/.ssh/private.key $SSH_USER@$SSH_HOST -p $SSH_PORT
+        env:
+          SSH_USER: ${{secrets.SSH_USER}}
+          SSH_HOST: ${{secrets.SSH_HOST}}
+          SSH_PORT: ${{secrets.SSH_PORT}}
