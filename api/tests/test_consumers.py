@@ -4,13 +4,20 @@ from uuid import UUID
 from asgiref.sync import sync_to_async
 from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
-from django.test import TransactionTestCase
+from django.test import TransactionTestCase, override_settings
 
 from api.routing import websocket_urlpatterns
 from api.tests.factories import WishListFactory, WishListUserFactory, WishFactory
 from core.models import Wish
 
 
+@override_settings(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        }
+    }
+)
 class WishlistConsumerTest(TransactionTestCase):
     def setUp(self):
         super().setUp()
