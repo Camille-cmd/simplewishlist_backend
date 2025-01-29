@@ -16,7 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 
 from django.conf import settings
 from .api import api
@@ -24,4 +24,9 @@ from .api import api
 urlpatterns = [
     path(f"{settings.ADMIN_URL}/", admin.site.urls),
     path("api/", api.urls),
+    path("oidc/", include("mozilla_django_oidc.urls")),
 ]
+
+admin.site.site_header = "SimpleWishlist Admin 🌟"
+admin.site.site_title = "SimpleWishlist Administration"
+admin.site.site_url = "https://simplewishlist.camillemeunier.fr"

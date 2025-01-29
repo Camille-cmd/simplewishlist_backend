@@ -1,0 +1,41 @@
+{% extends "admin/login.html" %}
+{% load static %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <style>
+        {# Change Django default CSS behavior #}
+        .login #content {
+            padding: 20px 20px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login #content br.clear {
+            display: none;
+        }
+
+        {# Custom CSS #}
+        .alternative-login-section {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        #sso-button {
+            text-align: center;
+            background: #344e41;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            color: var(--button-fg);
+        }
+
+    </style>
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+
+    <section class="alternative-login-section">
+        <a id="sso-button" href="{% url 'oidc_authentication_init' %}">Connect with SSO 🪩</a>
+    </section>
+{% endblock %}

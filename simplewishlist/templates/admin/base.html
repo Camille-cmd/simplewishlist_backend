@@ -1,0 +1,45 @@
+{% extends "admin/base.html" %}
+
+{% block welcome-msg %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+      .to-sso-users-form {
+        display: inline-block;
+        margin-right: 10px;
+      }
+
+      .to-sso-users-form .topbar-action-btn {
+        display: inline-block;
+        padding: 6px 10px;
+        font-weight: bold;
+        font-size: 12px;
+        border-radius: 4px;
+        position: relative;
+        top: -2px;
+      }
+
+      .to-sso-users-form #to-sso-users-btn {
+        background-color: #f66;
+        color: #301d20;
+      }
+    </style>
+{% endblock extrastyle %}
+
+{# Alert the administrators that a user using sso (inactive on first login) is waiting to be accepted #}
+{% if pending_sso_users and perms.auth.change_user %}
+<form class="to-sso-users-form" method="GET" action="{% url 'admin:auth_user_changelist' %}">
+    <input type="hidden" name="is_active__exact" value="0"/>
+    <input
+        type="submit"
+        id="to-sso-users-btn"
+        class="topbar-action-btn"
+        value="🔔 {{pending_sso_users}} user{{pending_sso_users|pluralize:',s'}} to validate">
+</form>
+
+{% endif %}
+
+{{ block.super }}
+
+{% endblock %}

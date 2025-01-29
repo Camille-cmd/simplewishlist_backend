@@ -5,10 +5,12 @@ attrs==24.2.0
 autobahn==24.4.2
 automat==24.8.1
 bandit==1.7.9
+certifi==2024.12.14
 cffi==1.17.0
 cfgv==3.4.0
 channels==4.1.0
 channels-redis==4.2.0
+charset-normalizer==3.4.0
 constantly==23.10.4
 coverage==7.5.4
 cryptography==43.0.0
@@ -25,8 +27,10 @@ hyperlink==21.0.0
 identify==2.5.36
 idna==3.8
 incremental==24.7.2
+josepy==1.14.0
 markdown-it-py==3.0.0
 mdurl==0.1.2
+mozilla-django-oidc==4.0.1
 msgpack==1.0.8
 nodeenv==1.9.1
 pbr==6.0.0
@@ -44,6 +48,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pyyaml==6.0.1
 redis==5.0.8
+requests==2.32.3
 rich==13.7.1
 ruff==0.5.0
 service-identity==24.1.0
@@ -55,5 +60,6 @@ tomli==2.0.1
 twisted==24.7.0
 txaio==23.1.1
 typing-extensions==4.12.2
+urllib3==2.2.3
 virtualenv==20.26.3
 zope-interface==7.0.1

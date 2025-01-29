@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "daphne",  # ASGI application server (use for websockets)
     "django.contrib.admin",
     "django.contrib.auth",
+    "mozilla_django_oidc",  # Load after auth
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -52,6 +53,12 @@ INSTALLED_APPS = [
     "channels_redis",
 ]
 
+# Add 'mozilla_django_oidc' authentication backend
+AUTHENTICATION_BACKENDS = (
+    "simplewishlist.authentication.SimplewishlistOIDCBackend",  # Authentification OIDC
+    "django.contrib.auth.backends.ModelBackend",  # Authentification classique
+)
+
 # MIDDLEWARE ARE DIFFERENT IN PROD AND DEV SETTINGS
 
 ROOT_URLCONF = "simplewishlist.urls"
@@ -59,7 +66,7 @@ ROOT_URLCONF = "simplewishlist.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -67,6 +74,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "core.context_processors.admin_navbar",
             ],
         },
     },
@@ -152,3 +160,17 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# SSO
+OIDC_RP_CLIENT_ID = os.environ["OIDC_RP_CLIENT_ID"]
+OIDC_RP_CLIENT_SECRET = os.environ["OIDC_RP_CLIENT_SECRET"]
+OIDC_RP_SCOPES = "openid email profile"
+OIDC_OP_AUTHORIZATION_ENDPOINT = "https://sso.grodzilla.fr/application/o/authorize/"
+OIDC_OP_TOKEN_ENDPOINT = "https://sso.grodzilla.fr/application/o/token/"
+OIDC_OP_USER_ENDPOINT = "https://sso.grodzilla.fr/application/o/userinfo/"
+OIDC_OP_JWKS_ENDPOINT = "https://sso.grodzilla.fr/application/o/simplewishlist/jwks/"
+OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7  # 1 week
+OIDC_RP_SIGN_ALGO = "RS256"
+LOGIN_REDIRECT_URL = "admin:index"
+LOGIN_REDIRECT_URL_FAILURE = "admin:index"
+OIDC_CALLBACK_CLASS = "simplewishlist.authentication.SimplewishlistOIDCCallbackView"
