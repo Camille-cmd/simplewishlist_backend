@@ -28,6 +28,12 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       CORS_ALLOWED_ORIGINS: 'http://localhost:3000'
+      OIDC_RP_CLIENT_ID: "test"
+      OIDC_RP_CLIENT_SECRET: "test_secret"
+      OIDC_OP_AUTHORIZATION_ENDPOINT: ""
+      OIDC_OP_TOKEN_ENDPOINT: ""
+      OIDC_OP_USER_ENDPOINT: ""
+      OIDC_OP_JWKS_ENDPOINT: ""
 
     strategy:
       max-parallel: 4

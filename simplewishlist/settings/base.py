@@ -39,6 +39,7 @@ ADMIN_URL = os.environ.get("ADMIN_URL", "admin")
 # Application definition
 INSTALLED_APPS = [
     "daphne",  # ASGI application server (use for websockets)
+    "django_oidc_admin",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -54,6 +55,12 @@ INSTALLED_APPS = [
 
 # MIDDLEWARE ARE DIFFERENT IN PROD AND DEV SETTINGS
 
+# Required settings for OIDC
+AUTHENTICATION_BACKENDS = (
+    "django_oidc_admin.authentication.DjangoOIDCAdminBackend",  # Authentication OIDC
+    "django.contrib.auth.backends.ModelBackend",  # Classic authentication
+)
+
 ROOT_URLCONF = "simplewishlist.urls"
 
 TEMPLATES = [
@@ -67,6 +74,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django_oidc_admin.context_processors.admin_navbar",
             ],
         },
     },
@@ -152,3 +160,21 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# SSO
+# Mozilla Django OIDC mandatory settings
+OIDC_RP_CLIENT_ID = os.environ["OIDC_RP_CLIENT_ID"]
+OIDC_RP_CLIENT_SECRET = os.environ["OIDC_RP_CLIENT_SECRET"]
+OIDC_RP_SCOPES = "openid email profile"
+OIDC_OP_AUTHORIZATION_ENDPOINT = os.environ["OIDC_OP_AUTHORIZATION_ENDPOINT"]
+OIDC_OP_TOKEN_ENDPOINT = os.environ["OIDC_OP_TOKEN_ENDPOINT"]
+OIDC_OP_USER_ENDPOINT = os.environ["OIDC_OP_USER_ENDPOINT"]
+OIDC_OP_JWKS_ENDPOINT = os.environ["OIDC_OP_JWKS_ENDPOINT"]
+OIDC_RP_SIGN_ALGO = os.environ.get("OIDC_RP_SIGN_ALGO", "RS256")
+
+# Custom settings Django-oidc-admin
+DOIDCADMIN_NEW_USER_GROUP_NAME = "Users"
+LOGIN_REDIRECT_URL = "admin:index"
+LOGIN_REDIRECT_URL_FAILURE = "admin:index"
+# Override the OIDC callback class to use the custom one
+OIDC_CALLBACK_CLASS = "django_oidc_admin.authentication.DjangoOIDCAdminCallbackView"

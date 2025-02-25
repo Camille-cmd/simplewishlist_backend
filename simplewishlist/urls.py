@@ -16,7 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 
 from django.conf import settings
 from .api import api
@@ -24,4 +24,5 @@ from .api import api
 urlpatterns = [
     path(f"{settings.ADMIN_URL}/", admin.site.urls),
     path("api/", api.urls),
+    path("oidc/", include("django_oidc_admin.urls")),
 ]
