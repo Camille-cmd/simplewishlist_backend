@@ -95,7 +95,7 @@ CHANNEL_LAYERS = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{os.environ["REDIS_HOST"]}:{os.environ["REDIS_PORT"]}/0",  # Database 1
+        "LOCATION": f"redis://{os.environ['REDIS_HOST']}:{os.environ['REDIS_PORT']}/0",  # Database 1
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
