@@ -7,6 +7,9 @@ from api.pydantic_models import (
     WishListSettingsData,
     WishListUserCreate,
     WishListModel,
+    WishlistUsersResponse,
+    WishlistUserSelectionModel,
+    UserAuthenticationModel,
 )
 from api.utils import get_wishlist_data
 from core.models import WishList, WishListUser
@@ -88,7 +91,13 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
             )
             created_users.append(created_user)
 
-    return created_users
+    # Convert users to response format with wishlist_id
+    user_responses = []
+    for user in created_users:
+        user_response = WishListUserFromModel.from_orm(user)
+        user_responses.append(user_response)
+
+    return user_responses
 
 
 @router.post("/wishlist", response={200: WishListSettingsData, 401: ErrorMessage}, by_alias=True)
@@ -142,7 +151,9 @@ def get_wishlist_users(request: HttpRequest):
     for user in users:
         users_data.append(WishListUserFromModel.from_orm(user))
 
-    return 200, WishListSettingHandleUsersData(wishlist_name=wishlist.wishlist_name, users=users_data)
+    return 200, WishListSettingHandleUsersData(
+        wishlist_name=wishlist.wishlist_name, wishlist_id=wishlist.id, users=users_data
+    )
 
 
 @router.post(
@@ -285,3 +296,76 @@ def update_user_in_wishlist(request: HttpRequest, user_id: str, payload: WishLis
         return 200, user
     except WishListUser.DoesNotExist:
         return 404, {"error": {"message": "User not found"}}
+
+
+# NEW ENDPOINTS FOR WISHLIST-BASED USER SELECTION
+
+
+@router.get(
+    "/wishlist/{wishlist_id}/users",
+    response={200: WishlistUsersResponse, 404: ErrorMessage},
+    auth=None,
+    by_alias=True,
+)
+def get_wishlist_users_for_selection(request: HttpRequest, wishlist_id: str):
+    """
+    Get users for a wishlist to allow user selection.
+    This endpoint does not require authentication.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+        wishlist_id (str): The UUID of the wishlist.
+
+    Returns:
+        WishlistUsersResponse: List of users that can be selected for this wishlist.
+        ErrorMessage: If wishlist is not found.
+    """
+    try:
+        wishlist = WishList.objects.get(id=wishlist_id)
+        users = wishlist.get_active_users()
+
+        user_data = []
+        for user in users:
+            user_data.append(
+                WishlistUserSelectionModel(id=user.id, name=user.name, is_admin=user.is_admin, is_active=user.is_active)
+            )
+
+        return 200, WishlistUsersResponse(
+            wishlist_id=wishlist.id, wishlist_name=wishlist.wishlist_name, users=user_data
+        )
+    except WishList.DoesNotExist:
+        return 404, {"error": {"message": "Wishlist not found"}}
+
+
+@router.post(
+    "/wishlist/{wishlist_id}/authenticate",
+    response={200: WishListUserFromModel, 404: ErrorMessage, 400: ErrorMessage},
+    auth=None,
+    by_alias=True,
+)
+def authenticate_user_with_wishlist(request: HttpRequest, wishlist_id: str, payload: UserAuthenticationModel):
+    """
+    Authenticate a user for a specific wishlist and return the user token.
+    This endpoint does not require authentication but returns a user token for subsequent requests.
+
+    Args:
+        request (HttpRequest): The HTTP request object.
+        wishlist_id (str): The UUID of the wishlist.
+        payload (UserAuthenticationModel): Contains the user_id to authenticate.
+
+    Returns:
+        WishListUserFromModel: The authenticated user object with token.
+        ErrorMessage: If wishlist or user is not found, or user is not active.
+    """
+    try:
+        wishlist = WishList.objects.get(id=wishlist_id)
+        user = wishlist.wishlist_users.get(id=payload.user_id)
+
+        if not user.is_active:
+            return 400, {"error": {"message": "User is not active"}}
+
+        return 200, user
+    except WishList.DoesNotExist:
+        return 404, {"error": {"message": "Wishlist not found"}}
+    except WishListUser.DoesNotExist:
+        return 404, {"error": {"message": "User not found in this wishlist"}}

@@ -152,3 +152,26 @@ class WebhookPayloadModel(BaseSchema):
     object_id: Optional[UUID4] = None
 
     # todo validate if post_values is not None, then objectId should not be None
+
+
+class WishlistUserSelectionModel(BaseSchema):
+    """Model for a user that can be selected for a wishlist"""
+
+    id: UUID4
+    name: str
+    is_admin: bool
+    is_active: bool
+
+
+class WishlistUsersResponse(BaseSchema):
+    """Response model for getting users of a wishlist"""
+
+    wishlist_id: UUID4
+    wishlist_name: str
+    users: list[WishlistUserSelectionModel]
+
+
+class UserAuthenticationModel(BaseSchema):
+    """Model for user authentication with wishlist"""
+
+    user_id: UUID4

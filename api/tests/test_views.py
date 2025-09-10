@@ -38,7 +38,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
     def test_put_wishlist(self):
         """Test that we can create the wishlist"""
         client = Client()  # only api call that does not need Authorization header
-        wishlist_name = self.wishlist.wishlist_name
+        wishlist_name = "Wishlist that is a test"
         data = {
             "wishlist_name": wishlist_name,
             "wishlist_admin_name": "Paul",
@@ -50,24 +50,39 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
 
+        wishlist_id = WishList.objects.get(
+            wishlist_name=wishlist_name,
+        ).id
         expected_response = [
-            {"id": str(WishListUser.objects.get(name="Paul").id), "name": "Paul", "isAdmin": True, "isActive": True},
-            {"id": str(WishListUser.objects.get(name="Peter").id), "name": "Peter", "isAdmin": False, "isActive": True},
             {
+                "wishlistId": str(wishlist_id),
+                "id": str(WishListUser.objects.get(name="Paul").id),
+                "name": "Paul",
+                "isAdmin": True,
+                "isActive": True,
+            },
+            {
+                "wishlistId": str(wishlist_id),
+                "id": str(WishListUser.objects.get(name="Peter").id),
+                "name": "Peter",
+                "isAdmin": False,
+                "isActive": True,
+            },
+            {
+                "wishlistId": str(wishlist_id),
                 "id": str(WishListUser.objects.get(name="Michelle").id),
                 "name": "Michelle",
                 "isAdmin": False,
                 "isActive": True,
             },
             {
+                "wishlistId": str(wishlist_id),
                 "id": str(WishListUser.objects.get(name="Victor").id),
                 "name": "Victor",
                 "isAdmin": False,
                 "isActive": True,
             },
         ]
-
-        self.assertTrue(WishList.objects.filter(wishlist_name=wishlist_name).exists())
         self.assertEqual(response.json(), expected_response)
 
     def test_put_wishlist_duplicated_names(self):
@@ -117,18 +132,21 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         self.assertEqual(response.status_code, 200)
         expected_data = {
             "wishlistName": self.wishlist.wishlist_name,
+            "wishlistId": str(self.wishlist.id),
             "users": [
                 {
                     "id": str(self.second_user.id),
                     "name": self.second_user.name,
                     "isAdmin": False,
                     "isActive": True,
+                    "wishlistId": str(self.wishlist.id),
                 },
                 {
                     "id": str(self.user.id),
                     "name": self.user.name,
                     "isAdmin": True,
                     "isActive": True,
+                    "wishlistId": str(self.wishlist.id),
                 },
             ],
         }
@@ -243,7 +261,14 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), {"id": str(self.user.id), "name": "New Name", "isAdmin": True, "isActive": True}
+            response.json(),
+            {
+                "id": str(self.user.id),
+                "name": "New Name",
+                "isAdmin": True,
+                "isActive": True,
+                "wishlistId": str(self.wishlist.id),
+            },
         )
 
     def test_update_user_not_admin(self):
@@ -281,5 +306,12 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), {"id": str(self.user.id), "name": self.user.name, "isAdmin": True, "isActive": True}
+            response.json(),
+            {
+                "id": str(self.user.id),
+                "name": self.user.name,
+                "isAdmin": True,
+                "isActive": True,
+                "wishlistId": str(self.wishlist.id),
+            },
         )
