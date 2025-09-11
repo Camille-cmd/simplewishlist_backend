@@ -6,6 +6,7 @@ from django.db import models
 class WishList(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     wishlist_name = models.CharField(max_length=100)
+    is_surprise_mode_enabled = models.BooleanField(default=True)
     show_users = models.BooleanField(default=False)
 
     def __str__(self):

@@ -53,6 +53,7 @@ def get_wishlist_settings(request: HttpRequest):
 
     return WishListSettingsData(
         wishlist_name=wishlist.wishlist_name,
+        surprise_mode_enabled=wishlist.is_surprise_mode_enabled,
         allow_see_assigned=wishlist.show_users,
     )
 
@@ -74,6 +75,7 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
     # Create the wishlist
     wishlist = WishList.objects.create(
         wishlist_name=payload.wishlist_name,
+        is_surprise_mode_enabled=payload.surprise_mode_enabled,
         show_users=payload.allow_see_assigned,
     )
 
@@ -122,11 +124,13 @@ def update_wishlist(request: HttpRequest, payload: WishListSettingsData):
 
     # Update the wishlist
     wishlist.wishlist_name = payload.wishlist_name
+    wishlist.is_surprise_mode_enabled = payload.surprise_mode_enabled
     wishlist.show_users = payload.allow_see_assigned
     wishlist.save()
 
     return WishListSettingsData(
         wishlist_name=wishlist.wishlist_name,
+        surprise_mode_enabled=wishlist.is_surprise_mode_enabled,
         allow_see_assigned=wishlist.show_users,
     )
 

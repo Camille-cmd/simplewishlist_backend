@@ -18,6 +18,7 @@ class BaseSchema(Schema):
 class WishlistInitModel(BaseSchema):
     wishlist_name: str
     wishlist_admin_name: str
+    surprise_mode_enabled: bool
     allow_see_assigned: bool
     other_users_names: Optional[list[str]]
 
@@ -119,6 +120,7 @@ class UserDeletedWishDataModel(BaseSchema):
 class WishListModel(BaseSchema):
     wishlist_id: UUID4
     name: str
+    surprise_mode_enabled: bool
     allow_see_assigned: bool
     current_user: str
     is_current_user_admin: bool
@@ -127,6 +129,7 @@ class WishListModel(BaseSchema):
 
 class WishListSettingsData(BaseSchema):
     wishlist_name: str
+    surprise_mode_enabled: bool
     allow_see_assigned: bool
 
 
