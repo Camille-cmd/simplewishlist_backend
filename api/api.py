@@ -58,7 +58,7 @@ def get_wishlist_settings(request: HttpRequest):
     )
 
 
-@router.put("/wishlist", response={200: list[WishListUserFromModel]}, auth=None, by_alias=True)
+@router.put("/wishlist", response={200: list[WishListUserFromModel], 400: ErrorMessage}, auth=None, by_alias=True)
 def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
     """
     Create a new wishlist.
@@ -71,6 +71,8 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
         list: The list of users created for the wishlist.
         An error message if the payload is invalid.
     """
+    if len(payload.other_users_names) == 1 and len(payload.other_users_names[0]) == 0:
+        return 400, ErrorMessage(error={"message": "At least one user must be added to the wishlist"})
 
     # Create the wishlist
     wishlist = WishList.objects.create(
@@ -81,14 +83,10 @@ def create_wishlist(request: HttpRequest, payload: WishlistInitModel):
 
     # Add users
     created_users = []
-    # The admin is one of the users
-    wishlist_admin = WishListUser.objects.create(name=payload.wishlist_admin_name, wishlist=wishlist, is_admin=True)
-    # The others
-    created_users.append(wishlist_admin)
     if other_users_names := payload.other_users_names:
-        for other_user_name in other_users_names:
+        for user_name in other_users_names:
             created_user = WishListUser.objects.create(
-                name=other_user_name,
+                name=user_name,
                 wishlist=wishlist,
             )
             created_users.append(created_user)
@@ -117,8 +115,6 @@ def update_wishlist(request: HttpRequest, payload: WishListSettingsData):
     """
 
     current_user = request.auth
-    if not current_user.is_admin:
-        return 401, {"error": {"message": "Only the admin can update the wishlist"}}
 
     wishlist = current_user.wishlist
 
@@ -181,15 +177,11 @@ def deactivate_user(request: HttpRequest, user_id: str):
         SimpleWishlistValidationError: If there is a validation error during the deactivation of the user.
     """
     current_user = request.auth
-    if not current_user.is_admin:
-        return 401, {"error": {"message": "Only the admin can deactivate a user"}}
 
     wishlist = current_user.wishlist
 
     try:
         user = wishlist.wishlist_users.get(id=user_id)
-        if user.is_admin:
-            return 401, {"error": {"message": "The admin can not be deactivated"}}
         user.is_active = False
         user.save()
         return 200, user
@@ -218,8 +210,6 @@ def activate_user(request: HttpRequest, user_id: str):
         SimpleWishlistValidationError: If there is a validation error during the activation of the user.
     """
     current_user = request.auth
-    if not current_user.is_admin:
-        return 401, {"error": {"message": "Only the admin can activate a user"}}
 
     wishlist = current_user.wishlist
 
@@ -253,8 +243,6 @@ def add_new_user_to_wishlist(request: HttpRequest, payload: WishListUserCreate):
         SimpleWishlistValidationError: If there is a validation error during the creation of the user.
     """
     current_user = request.auth
-    if not current_user.is_admin:
-        return 401, {"error": {"message": "Only the admin can add a user"}}
 
     if payload.name in current_user.wishlist.get_users().values_list("name", flat=True):
         return 400, {"error": {"message": "User already exists in the wishlist"}}
@@ -286,8 +274,6 @@ def update_user_in_wishlist(request: HttpRequest, user_id: str, payload: WishLis
         SimpleWishlistValidationError: If there is a validation error during the update of the user.
     """
     current_user = request.auth
-    if not current_user.is_admin:
-        return 401, {"error": {"message": "Only the admin can update a user"}}
 
     # Check if the user exists in the wishlist but exclude the user being updated, as the user can keep the same name
     if payload.name in current_user.wishlist.get_users(exclude_users_ids=[user_id]).values_list("name", flat=True):
@@ -330,9 +316,7 @@ def get_wishlist_users_for_selection(request: HttpRequest, wishlist_id: str):
 
         user_data = []
         for user in users:
-            user_data.append(
-                WishlistUserSelectionModel(id=user.id, name=user.name, is_admin=user.is_admin, is_active=user.is_active)
-            )
+            user_data.append(WishlistUserSelectionModel(id=user.id, name=user.name, is_active=user.is_active))
 
         return 200, WishlistUsersResponse(
             wishlist_id=wishlist.id, wishlist_name=wishlist.wishlist_name, users=user_data
@@ -350,7 +334,7 @@ def get_wishlist_users_for_selection(request: HttpRequest, wishlist_id: str):
 def authenticate_user_with_wishlist(request: HttpRequest, wishlist_id: str, payload: UserAuthenticationModel):
     """
     Authenticate a user for a specific wishlist and return the user token.
-    This endpoint does not require authentication but returns a user token for subsequent requests.
+    To goal is to verify that the user is still within the wishlist.
 
     Args:
         request (HttpRequest): The HTTP request object.

@@ -9,7 +9,7 @@ from core.models import WishListUser
 class WishListUserFromModel(ModelSchema):
     class Meta:
         model = WishListUser
-        fields = ["id", "name", "is_admin", "is_active"]
+        fields = ["id", "name", "is_active"]
 
     wishlist_id: uuid.UUID
 

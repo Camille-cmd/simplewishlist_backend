@@ -22,10 +22,6 @@ class WishList(models.Model):
             exclude_users_ids = []
         return self.wishlist_users.order_by("name", "-is_active").exclude(id__in=exclude_users_ids)
 
-    def get_admin(self):
-        """Return the admin of the wishlist"""
-        return self.wishlist_users.get(is_admin=True)
-
     class Meta:
         verbose_name = "Wishlist"
         verbose_name_plural = "Wishlists"

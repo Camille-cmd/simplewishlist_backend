@@ -55,6 +55,5 @@ def get_wishlist_data(user: WishListUser) -> WishListModel:
         surprise_mode_enabled=wishlist.is_surprise_mode_enabled,
         allow_see_assigned=wishlist.show_users,
         current_user=user.name,
-        is_current_user_admin=user.is_admin,
         user_wishes=users_wishes,
     )

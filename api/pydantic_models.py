@@ -17,14 +17,13 @@ class BaseSchema(Schema):
 
 class WishlistInitModel(BaseSchema):
     wishlist_name: str
-    wishlist_admin_name: str
     surprise_mode_enabled: bool
     allow_see_assigned: bool
-    other_users_names: Optional[list[str]]
+    other_users_names: list[str]
 
     @model_validator(mode="after")
     def no_two_same_names_validate(self):
-        names = self.wishlist_admin_name, *self.other_users_names
+        names = self.other_users_names or []
         # Count the number of element in the list that appear more than once
         duplicated_names = [x for x, y in collections.Counter(names).items() if y > 1]
         if duplicated_names:
@@ -123,7 +122,6 @@ class WishListModel(BaseSchema):
     surprise_mode_enabled: bool
     allow_see_assigned: bool
     current_user: str
-    is_current_user_admin: bool
     user_wishes: list[WishListUserModel]
 
 
@@ -162,7 +160,6 @@ class WishlistUserSelectionModel(BaseSchema):
 
     id: UUID4
     name: str
-    is_admin: bool
     is_active: bool
 
 

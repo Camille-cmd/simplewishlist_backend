@@ -22,7 +22,7 @@ class TestWishListUser(SimpleWishlistBaseTestCase):
         )
 
     def test_wishlist_user_creation(self):
-        user = WishListUser.objects.create(name="Bob", is_admin=True, wishlist=self.wishlist)
+        user = WishListUser.objects.create(name="Bob", wishlist=self.wishlist)
         self.assertTrue(isinstance(user, WishListUser))
 
     def test_get_user_wishes(self):
@@ -188,6 +188,3 @@ class TestWishList(SimpleWishlistBaseTestCase):
         active_users = self.wishlist.get_active_users()
         self.assertIn(self.user, active_users)
         self.assertNotIn(self.inactive_user, active_users)
-
-    def test_get_admin(self):
-        self.assertEqual(self.wishlist.get_admin(), self.user)
