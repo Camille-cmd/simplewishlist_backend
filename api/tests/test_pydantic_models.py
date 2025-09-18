@@ -13,9 +13,9 @@ class TestWishlistInitModel(SimpleWishlistBaseTestCase):
         # We have two users with the same name, il should raise a ValidationError
         data = {
             "wishlist_name": "Noël",
-            "wishlist_admin_name": "Tom",
             "allow_see_assigned": True,
-            "other_users_names": ["Tom", "John", "Maggie"],
+            "surprise_mode_enabled": True,
+            "other_users_names": ["Tom", "Tom", "John", "Maggie"],
         }
 
         with self.assertRaisesRegex(ValidationError, "Identical names detected"):

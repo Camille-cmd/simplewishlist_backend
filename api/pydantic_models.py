@@ -17,13 +17,13 @@ class BaseSchema(Schema):
 
 class WishlistInitModel(BaseSchema):
     wishlist_name: str
-    wishlist_admin_name: str
+    surprise_mode_enabled: bool
     allow_see_assigned: bool
-    other_users_names: Optional[list[str]]
+    other_users_names: list[str]
 
     @model_validator(mode="after")
     def no_two_same_names_validate(self):
-        names = self.wishlist_admin_name, *self.other_users_names
+        names = self.other_users_names or []
         # Count the number of element in the list that appear more than once
         duplicated_names = [x for x, y in collections.Counter(names).items() if y > 1]
         if duplicated_names:
@@ -119,14 +119,15 @@ class UserDeletedWishDataModel(BaseSchema):
 class WishListModel(BaseSchema):
     wishlist_id: UUID4
     name: str
+    surprise_mode_enabled: bool
     allow_see_assigned: bool
     current_user: str
-    is_current_user_admin: bool
     user_wishes: list[WishListUserModel]
 
 
 class WishListSettingsData(BaseSchema):
     wishlist_name: str
+    surprise_mode_enabled: bool
     allow_see_assigned: bool
 
 
@@ -152,3 +153,25 @@ class WebhookPayloadModel(BaseSchema):
     object_id: Optional[UUID4] = None
 
     # todo validate if post_values is not None, then objectId should not be None
+
+
+class WishlistUserSelectionModel(BaseSchema):
+    """Model for a user that can be selected for a wishlist"""
+
+    id: UUID4
+    name: str
+    is_active: bool
+
+
+class WishlistUsersResponse(BaseSchema):
+    """Response model for getting users of a wishlist"""
+
+    wishlist_id: UUID4
+    wishlist_name: str
+    users: list[WishlistUserSelectionModel]
+
+
+class UserAuthenticationModel(BaseSchema):
+    """Model for user authentication with wishlist"""
+
+    user_id: UUID4

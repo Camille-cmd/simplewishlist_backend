@@ -31,6 +31,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         expected_data = {
             "wishlistName": self.wishlist.wishlist_name,
             "allowSeeAssigned": False,
+            "surpriseModeEnabled": True,
         }
 
         self.assertEqual(response.json(), expected_data)
@@ -38,11 +39,11 @@ class TestWishListView(SimpleWishlistBaseTestCase):
     def test_put_wishlist(self):
         """Test that we can create the wishlist"""
         client = Client()  # only api call that does not need Authorization header
-        wishlist_name = self.wishlist.wishlist_name
+        wishlist_name = "Wishlist that is a test"
         data = {
             "wishlist_name": wishlist_name,
-            "wishlist_admin_name": "Paul",
             "allow_see_assigned": True,
+            "surprise_mode_enabled": True,
             "other_users_names": ["Peter", "Michelle", "Victor"],
         }
         url = reverse("api-1.0.0:create_wishlist")
@@ -50,24 +51,29 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
 
+        wishlist_id = WishList.objects.get(
+            wishlist_name=wishlist_name,
+        ).id
         expected_response = [
-            {"id": str(WishListUser.objects.get(name="Paul").id), "name": "Paul", "isAdmin": True, "isActive": True},
-            {"id": str(WishListUser.objects.get(name="Peter").id), "name": "Peter", "isAdmin": False, "isActive": True},
             {
-                "id": str(WishListUser.objects.get(name="Michelle").id),
-                "name": "Michelle",
-                "isAdmin": False,
+                "wishlistId": str(wishlist_id),
+                "id": str(WishListUser.objects.get(name="Peter").id),
+                "name": "Peter",
                 "isActive": True,
             },
             {
+                "wishlistId": str(wishlist_id),
+                "id": str(WishListUser.objects.get(name="Michelle").id),
+                "name": "Michelle",
+                "isActive": True,
+            },
+            {
+                "wishlistId": str(wishlist_id),
                 "id": str(WishListUser.objects.get(name="Victor").id),
                 "name": "Victor",
-                "isAdmin": False,
                 "isActive": True,
             },
         ]
-
-        self.assertTrue(WishList.objects.filter(wishlist_name=wishlist_name).exists())
         self.assertEqual(response.json(), expected_response)
 
     def test_put_wishlist_duplicated_names(self):
@@ -75,9 +81,8 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         client = Client()
         data = {
             "wishlist_name": "Wishlist",
-            "wishlist_admin_name": "Paul",
             "allow_see_assigned": True,
-            "other_users_names": ["Paul", "Michelle", "Victor"],
+            "other_users_names": ["Paul", "Paul", "Michelle", "Victor"],
         }
         url = reverse("api-1.0.0:create_wishlist")
         response = client.put(url, json.dumps(data))
@@ -88,6 +93,7 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         """Test that we can update the wishlist"""
         data = {
             "wishlist_name": "New Wishlist Name",
+            "surprise_mode_enabled": True,
             "allow_see_assigned": True,
         }
         url = reverse("api-1.0.0:update_wishlist")
@@ -95,19 +101,27 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         # The response should return the new data
-        self.assertEqual(response.json(), {"wishlistName": "New Wishlist Name", "allowSeeAssigned": True})
+        self.assertEqual(
+            response.json(),
+            {"wishlistName": "New Wishlist Name", "surpriseModeEnabled": True, "allowSeeAssigned": True},
+        )
 
-    def test_update_wishlist_not_admin(self):
-        """Test that a non-admin cannot update the wishlist"""
+    def test_update_wishlist_by_any_user(self):
+        """Test that any user can update the wishlist"""
         data = {
             "wishlist_name": "New Wishlist Name",
             "allow_see_assigned": True,
+            "surprise_mode_enabled": True,
         }
         client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         url = reverse("api-1.0.0:update_wishlist")
         response = client.post(url, data=json.dumps(data), content_type="application/json")
 
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"wishlistName": "New Wishlist Name", "allowSeeAssigned": True, "surpriseModeEnabled": True},
+        )
 
     def test_get_wishlist_users(self):
         """Test that we can get the wishlist users"""
@@ -117,18 +131,19 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         self.assertEqual(response.status_code, 200)
         expected_data = {
             "wishlistName": self.wishlist.wishlist_name,
+            "wishlistId": str(self.wishlist.id),
             "users": [
                 {
                     "id": str(self.second_user.id),
                     "name": self.second_user.name,
-                    "isAdmin": False,
                     "isActive": True,
+                    "wishlistId": str(self.wishlist.id),
                 },
                 {
                     "id": str(self.user.id),
                     "name": self.user.name,
-                    "isAdmin": True,
                     "isActive": True,
+                    "wishlistId": str(self.wishlist.id),
                 },
             ],
         }
@@ -142,26 +157,15 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(WishListUser.objects.get(id=self.second_user.id).is_active)
 
-    def test_deactivate_user_not_admin(self):
-        """Test that a non-admin cannot deactivate a user"""
+    def test_deactivate_user_by_any_user(self):
+        """Test that any user can deactivate another user"""
         client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         url = reverse("api-1.0.0:deactivate_user", kwargs={"user_id": str(self.user.id)})
         response = client.post(url)
 
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()["error"]["message"], "Only the admin can deactivate a user")
-        # The user should still be active
-        self.assertTrue(WishListUser.objects.get(id=self.user.id).is_active)
-
-    def test_deactivate_user_admin(self):
-        """Test that we cannot deactivate the admin"""
-        url = reverse("api-1.0.0:deactivate_user", kwargs={"user_id": str(self.user.id)})
-        response = self.client.post(url)
-
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()["error"]["message"], "The admin can not be deactivated")
-        # The user should still be active
-        self.assertTrue(WishListUser.objects.get(id=self.user.id).is_active)
+        self.assertEqual(response.status_code, 200)
+        # The user should now be inactive
+        self.assertFalse(WishListUser.objects.get(id=self.user.id).is_active)
 
     def test_deactivate_user_not_found(self):
         """Test that we cannot deactivate a user that does not exist"""
@@ -183,17 +187,17 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(WishListUser.objects.get(id=self.second_user.id).is_active)
 
-    def test_activate_user_not_admin(self):
-        """Test that a non-admin cannot activate a user"""
+    def test_activate_user_by_any_user(self):
+        """Test that any user can activate another user"""
         self.user.is_active = False
         self.user.save()
 
         client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         url = reverse("api-1.0.0:activate_user", kwargs={"user_id": str(self.user.id)})
         response = client.post(url)
-        self.assertEqual(response.json()["error"]["message"], "Only the admin can activate a user")
-        # The user should still be inactive
-        self.assertFalse(WishListUser.objects.get(id=self.user.id).is_active)
+        self.assertEqual(response.status_code, 200)
+        # The user should now be active
+        self.assertTrue(WishListUser.objects.get(id=self.user.id).is_active)
 
     def test_activate_user_not_found(self):
         """Test that we cannot activate a user that does not exist"""
@@ -212,16 +216,15 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue(WishListUser.objects.filter(name="Paul").exists())
 
-    def test_add_new_user_to_wishlist_not_by_admin(self):
-        """Test that a user that is not an admin cannot add a new user"""
-        # Second user is not an admin
+    def test_add_new_user_to_wishlist_by_any_user(self):
+        """Test that any user can add a new user"""
         client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         data = {"name": "Paul"}
         url = reverse("api-1.0.0:add_new_user_to_wishlist")
         response = client.put(url, json.dumps(data))
 
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.json()["error"]["message"], "Only the admin can add a user")
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(WishListUser.objects.filter(name="Paul").exists())
 
     def test_add_new_user_to_wishlist_duplicated(self):
         """Test that we cannot create a new user with the same name"""
@@ -243,17 +246,32 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), {"id": str(self.user.id), "name": "New Name", "isAdmin": True, "isActive": True}
+            response.json(),
+            {
+                "id": str(self.user.id),
+                "name": "New Name",
+                "isActive": True,
+                "wishlistId": str(self.wishlist.id),
+            },
         )
 
-    def test_update_user_not_admin(self):
-        """Test that a non-admin cannot update a user"""
+    def test_update_user_by_any_user(self):
+        """Test that any user can update another user"""
         data = {"name": "New Name"}
         client = Client(headers={"Authorization": f"bearer {str(self.second_user.id)}"})
         url = reverse("api-1.0.0:update_user_in_wishlist", kwargs={"user_id": str(self.user.id)})
         response = client.post(url, data=json.dumps(data), content_type="application/json")
 
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "id": str(self.user.id),
+                "name": "New Name",
+                "isActive": True,
+                "wishlistId": str(self.wishlist.id),
+            },
+        )
 
     def test_update_user_not_found(self):
         """Test that we cannot update a user that does not exist"""
@@ -281,5 +299,11 @@ class TestWishListView(SimpleWishlistBaseTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), {"id": str(self.user.id), "name": self.user.name, "isAdmin": True, "isActive": True}
+            response.json(),
+            {
+                "id": str(self.user.id),
+                "name": self.user.name,
+                "isActive": True,
+                "wishlistId": str(self.wishlist.id),
+            },
         )

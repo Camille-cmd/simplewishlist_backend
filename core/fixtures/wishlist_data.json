@@ -356,7 +356,6 @@
     "fields": {
       "id": "6999920a-67df-4c0d-8299-ebc88446d64c",
       "name": "Gandalf",
-      "is_admin": true,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   },
@@ -405,7 +404,6 @@
     "fields": {
       "id": "dacf9fd4-8a30-47d2-882f-cf07254a06b4",
       "name": "Frodon Sacquet",
-      "is_admin": false,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   },
@@ -441,7 +439,6 @@
     "fields": {
       "id": "021963b3-d4a2-4901-a99c-50799a304908",
       "name": "Sam Gamegie",
-      "is_admin": false,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   },
@@ -503,7 +500,6 @@
     "fields": {
       "id": "90972c96-a493-4cda-a70e-791c857b56d6",
       "name": "Meriadoc Brandebouc",
-      "is_admin": false,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   },
@@ -526,7 +522,6 @@
     "fields": {
       "id": "cb035bce-2c01-4e41-9134-cb7fb4a151d2",
       "name": "Peregrin Touque",
-      "is_admin": false,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   },
@@ -549,7 +544,6 @@
     "fields": {
       "id": "5207a3b6-362c-45ba-8cef-eae4b756a9fe",
       "name": "Aragorn",
-      "is_admin": false,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   },
@@ -585,7 +579,6 @@
     "fields": {
       "id": "3fbb6c87-68fc-4112-ba55-0566a2e19bbe",
       "name": "Tom Bombadil",
-      "is_admin": false,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   },
@@ -608,7 +601,6 @@
     "fields": {
       "id": "f35b02e3-56b7-4e7f-a618-66990a5c4103",
       "name": "Elrond",
-      "is_admin": false,
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
     }
   }
