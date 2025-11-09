@@ -133,9 +133,19 @@ class WishlistConsumer(JsonWebsocketConsumer):
         """Create a wish and send the updated wishes to the group"""
         wish_payload = WishModel.model_validate(payload.post_values)
 
-        # Add the wishlist user
+        # Determine if this is a suggested wish
         wish_data = wish_payload.dict()
-        wish_data.update({"wishlist_user": self.current_user})
+
+        if wish_payload.suggested_for_user_id:
+            # Suggestion mode: create wish for another user
+            target_user = get_object_or_404(WishListUser, pk=wish_payload.suggested_for_user_id)
+            wish_data.update({"wishlist_user": target_user, "suggested_by": self.current_user})
+        else:
+            # Regular mode: create wish for current user
+            wish_data.update({"wishlist_user": self.current_user, "suggested_by": None})
+
+        # Remove suggested_for_user_id from wish_data as it's not a model field
+        wish_data.pop("suggested_for_user_id", None)
 
         created_wish = Wish.objects.create(**wish_data)
 
@@ -178,6 +188,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
                 id=wish.id,
                 assigned_user=wish.assigned_user.name if wish.assigned_user else None,
                 deleted=wish.deleted,
+                suggested_by=wish.suggested_by.name if wish.suggested_by else None,
             )
             user_wish_data = UserWishDataModel(user=wish.wishlist_user.name, wish=wish_data)
 

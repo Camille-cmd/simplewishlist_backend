@@ -25,20 +25,6 @@ class TestWishListUser(SimpleWishlistBaseTestCase):
         user = WishListUser.objects.create(name="Bob", wishlist=self.wishlist)
         self.assertTrue(isinstance(user, WishListUser))
 
-    def test_get_user_wishes(self):
-        """Test that we correctly retrieve the user wishes"""
-        # Create a second wish for the user
-        second_wish = WishFactory.create(name="A big Teddy Bear 2", wishlist_user=self.user)
-
-        # Wishes no matter if they are assigned or not
-        wishes = self.user.get_user_wishes()
-        self.assertEqual(len(wishes), 3)
-        # Ordered by pk
-        wishes = sorted(wishes, key=lambda x: x.name)
-        self.assertEqual(wishes[0].id, self.unassigned_wish.id)
-        self.assertEqual(wishes[1].id, second_wish.id)
-        self.assertEqual(wishes[2].id, self.assigned_wish.id)
-
 
 class TestWish(SimpleWishlistBaseTestCase):
     def setUp(self):

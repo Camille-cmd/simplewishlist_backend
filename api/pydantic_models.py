@@ -43,6 +43,7 @@ class WishListWishModel(BaseSchema):
     description: Optional[str] = None
     id: Optional[UUID4] = None
     assigned_user: Optional[str] = None
+    suggested_by: Optional[str] = None
 
     @field_serializer("url")
     def serialize_url(self, url: AnyUrl):
@@ -52,13 +53,14 @@ class WishListWishModel(BaseSchema):
             return str(url)
 
 
-class WishModel(Schema):
+class WishModel(BaseSchema):
     """Wish creation"""
 
     name: str
     price: Optional[str] = None
     url: Optional[AnyUrl] = None
     description: Optional[str] = None
+    suggested_for_user_id: Optional[UUID4] = None
 
     @field_validator("url", mode="before")
     @classmethod
@@ -91,6 +93,14 @@ class WishModelUpdate(WishModel):
                 "none_value_not_allowed",
                 "Name can not be null nor empty",
             )
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def enforce_suggested_for_user_id_none(cls, data: DjangoGetter) -> Any:
+        """Enforce suggested_for_user_id to be None if an empty string is passed"""
+        if hasattr(data, "suggestedForUserId") and data.suggestedForUserId == "":
+            data.suggestedForUserId = None
         return data
 
 
