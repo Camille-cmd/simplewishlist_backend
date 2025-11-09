@@ -24,6 +24,14 @@ class Wish(models.Model):
         related_name="wishes",
         help_text="The wish belongs to this user",
     )
+    suggested_by = models.ForeignKey(
+        "WishListUser",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="suggested_wishes",
+        help_text="The user who suggested this wish",
+    )
     deleted = models.BooleanField(
         default=False,
     )
@@ -97,13 +105,25 @@ class Wish(models.Model):
                     )
 
             else:
-                # check that the user trying to change things is the owner of the wish
-                if current_user_id != self.wishlist_user.id:
-                    raise SimpleWishlistValidationError(
-                        model="Wish",
-                        field=value,
-                        message="Only the owner of the wish can change the wish data.",
-                    )
+                # Check edit permissions based on whether it's a suggested wish or regular wish
+                # Suggested wish: only suggester can edit
+                # Regular wish: only owner can edit
+                if self.suggested_by is not None:
+                    # Suggested wish
+                    if current_user_id != self.suggested_by.id:
+                        raise SimpleWishlistValidationError(
+                            model="Wish",
+                            field=attr,
+                            message="Only the suggester can edit this suggested wish.",
+                        )
+                else:
+                    # Regular wish
+                    if current_user_id != self.wishlist_user.id:
+                        raise SimpleWishlistValidationError(
+                            model="Wish",
+                            field=attr,
+                            message="Only the owner of the wish can change the wish data.",
+                        )
 
                 setattr(self, attr, value)
 
@@ -121,7 +141,18 @@ class Wish(models.Model):
             self.save()
 
     def can_be_deleted(self, current_user_id: uuid.UUID) -> tuple[bool, str]:
-        """Check if the wish can be deleted"""
+        """
+        Check if the wish can be deleted
+        Regular wishes: only the owner can delete
+        Suggested wishes: only the suggester can delete
+        """
+        # Suggested wish: only suggester can delete
+        if self.suggested_by is not None:
+            if self.suggested_by.id != current_user_id:
+                return False, "Only the suggester can delete this suggested wish."
+            return True, ""
+
+        # Regular wish: only owner can delete
         if self.wishlist_user.id != current_user_id:
             return False, "Only the owner of the wish can delete it."
 

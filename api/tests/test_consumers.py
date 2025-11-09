@@ -86,6 +86,7 @@ class WishlistConsumerTest(TransactionTestCase):
                         "description": None,
                         "id": str(wish_created.id),
                         "assignedUser": None,
+                        "suggestedBy": None,
                     },
                 },
                 "userToken": "Bob",
@@ -164,6 +165,7 @@ class WishlistConsumerTest(TransactionTestCase):
                         "description": None,
                         "id": str(updated_wish.id),
                         "assignedUser": None,
+                        "suggestedBy": None,
                     },
                 },
                 "userToken": "Bob",
@@ -211,6 +213,7 @@ class WishlistConsumerTest(TransactionTestCase):
                         "description": None,
                         "id": str(wish.id),
                         "assignedUser": "Bob",
+                        "suggestedBy": None,
                     },
                 },
                 "userToken": "Bob",
@@ -419,5 +422,253 @@ class WishlistConsumerTest(TransactionTestCase):
         response = await communicator.receive_json_from()
 
         self.assertEqual(response, {"type": "error_message", "data": "Invalid action"})
+
+        await communicator.disconnect()
+
+    async def test_create_suggested_wish(self):
+        """Test that the WishlistConsumer creates a suggested wish correctly."""
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
+        await communicator.connect()
+        # First message is the connection message
+        await communicator.receive_json_from()
+
+        # User (Bob) suggests a wish for second_user (Alice)
+        post_values = {
+            "name": "Suggested wish",
+            "price": "50.0",
+            "url": "http://example.com/suggested",
+            "suggestedForUserId": str(self.second_user.id),
+        }
+        data = {
+            "type": "create_wish",
+            "currentUser": str(self.user.id),
+            "post_values": post_values,
+            "objectId": None,
+        }
+
+        await communicator.send_json_to(data)
+        response = await communicator.receive_json_from()
+
+        # Verify the wish was created
+        wish_created = await sync_to_async(Wish.objects.get)(name="Suggested wish")
+        self.assertIsNotNone(wish_created)
+
+        # Access related fields with sync_to_async
+        wishlist_user_id = await sync_to_async(lambda: wish_created.wishlist_user.id)()
+        suggested_by_id = await sync_to_async(lambda: wish_created.suggested_by.id)()
+
+        self.assertEqual(wishlist_user_id, self.second_user.id)
+        self.assertEqual(suggested_by_id, self.user.id)
+
+        # Verify the response
+        self.assertEqual(
+            response,
+            {
+                "type": "updated_wish",
+                "data": {
+                    "user": "Alice",
+                    "wish": {
+                        "name": "Suggested wish",
+                        "deleted": False,
+                        "price": "50.0",
+                        "url": "http://example.com/suggested",
+                        "description": None,
+                        "id": str(wish_created.id),
+                        "assignedUser": None,
+                        "suggestedBy": "Bob",
+                    },
+                },
+                "userToken": "Bob",
+                "action": "create_wish",
+            },
+        )
+
+        await communicator.disconnect()
+
+    async def test_suggester_can_edit_suggested_wish(self):
+        """Test that the suggester can edit their suggested wish."""
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
+        await communicator.connect()
+        # First message is the connection message
+        await communicator.receive_json_from()
+
+        # Create a suggested wish (Bob suggests for Alice)
+        wish = await sync_to_async(WishFactory)(
+            wishlist_user=self.second_user, suggested_by=self.user, name="Original name"
+        )
+
+        # Bob (suggester) tries to edit the wish
+        post_values = {
+            "name": "Updated name",
+            "price": "100.0",
+        }
+        data = {
+            "type": "update_wish",
+            "currentUser": str(self.user.id),
+            "post_values": post_values,
+            "objectId": str(wish.id),
+        }
+
+        await communicator.send_json_to(data)
+        await communicator.receive_json_from()
+
+        # Verify the wish was updated
+        updated_wish = await sync_to_async(Wish.objects.get)(id=wish.id)
+        self.assertEqual(updated_wish.name, "Updated name")
+        self.assertEqual(updated_wish.price, "100.0")
+
+        await communicator.disconnect()
+
+    async def test_wish_owner_cannot_edit_suggested_wish(self):
+        """Test that the wish owner cannot edit a suggested wish."""
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.second_user.id}/")
+        await communicator.connect()
+        # First message is the connection message
+        await communicator.receive_json_from()
+
+        # Create a suggested wish (Bob suggests for Alice)
+        wish = await sync_to_async(WishFactory)(
+            wishlist_user=self.second_user, suggested_by=self.user, name="Original name"
+        )
+
+        # Alice (wish owner) tries to edit the wish
+        post_values = {
+            "name": "Updated name",
+        }
+        data = {
+            "type": "update_wish",
+            "currentUser": str(self.second_user.id),
+            "post_values": post_values,
+            "objectId": str(wish.id),
+        }
+
+        await communicator.send_json_to(data)
+        response = await communicator.receive_json_from()
+
+        # Verify the error message
+        self.assertEqual(
+            response,
+            {
+                "type": "error_message",
+                "data": "Only the suggester can edit this suggested wish.",
+            },
+        )
+
+        # Verify the wish was not updated
+        wish_after = await sync_to_async(Wish.objects.get)(id=wish.id)
+        self.assertEqual(wish_after.name, "Original name")
+
+        await communicator.disconnect()
+
+    async def test_suggester_can_delete_suggested_wish(self):
+        """Test that the suggester can delete their suggested wish."""
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
+        await communicator.connect()
+        # First message is the connection message
+        await communicator.receive_json_from()
+
+        # Create a suggested wish (Bob suggests for Alice)
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.second_user, suggested_by=self.user)
+
+        # Bob (suggester) tries to delete the wish
+        await communicator.send_json_to(
+            {
+                "type": "delete_wish",
+                "currentUser": str(self.user.id),
+                "objectId": str(wish.id),
+            }
+        )
+        await communicator.receive_json_from()
+
+        # Verify the wish was deleted
+        with self.assertRaises(Wish.DoesNotExist):
+            await sync_to_async(Wish.objects.get)(id=wish.id)
+
+        await communicator.disconnect()
+
+    async def test_wish_owner_cannot_delete_suggested_wish(self):
+        """Test that the wish owner cannot delete a suggested wish."""
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.second_user.id}/")
+        await communicator.connect()
+        # First message is the connection message
+        await communicator.receive_json_from()
+
+        # Create a suggested wish (Bob suggests for Alice)
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.second_user, suggested_by=self.user)
+
+        # Alice (wish owner) tries to delete the wish
+        await communicator.send_json_to(
+            {
+                "type": "delete_wish",
+                "currentUser": str(self.second_user.id),
+                "objectId": str(wish.id),
+            }
+        )
+        response = await communicator.receive_json_from()
+
+        # Verify the error message
+        self.assertEqual(
+            response,
+            {
+                "type": "error_message",
+                "data": "Only the suggester can delete this suggested wish.",
+            },
+        )
+
+        # Verify the wish still exists
+        wish_after = await sync_to_async(Wish.objects.get)(id=wish.id)
+        self.assertIsNotNone(wish_after)
+
+        await communicator.disconnect()
+
+    async def test_suggested_wish_can_be_assigned(self):
+        """Test that a suggested wish can be assigned/taken by other users."""
+        communicator = WebsocketCommunicator(self.application, f"/ws/wishlist/{self.user.id}/")
+        await communicator.connect()
+        # First message is the connection message
+        await communicator.receive_json_from()
+
+        # Create a suggested wish (Bob suggests for Alice)
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.second_user, suggested_by=self.user)
+
+        # Third user would take this wish, but we'll use Bob for simplicity
+        # Bob (not the owner) takes the wish
+        post_values = {"assignedUser": str(self.user.id)}
+        data = {
+            "type": "update_wish",
+            "currentUser": str(self.user.id),
+            "post_values": post_values,
+            "objectId": str(wish.id),
+        }
+
+        await communicator.send_json_to(data)
+        response = await communicator.receive_json_from()
+
+        # Verify the wish was assigned
+        updated_wish = await sync_to_async(Wish.objects.get)(id=wish.id)
+        assigned_user_id = await sync_to_async(lambda: updated_wish.assigned_user.id)()
+        self.assertEqual(assigned_user_id, self.user.id)
+
+        self.assertEqual(
+            response,
+            {
+                "type": "updated_wish",
+                "data": {
+                    "user": "Alice",
+                    "wish": {
+                        "name": wish.name,
+                        "deleted": False,
+                        "price": None,
+                        "url": None,
+                        "description": None,
+                        "id": str(wish.id),
+                        "assignedUser": "Bob",
+                        "suggestedBy": "Bob",
+                    },
+                },
+                "userToken": "Bob",
+                "action": "change_wish_assigned_user",
+            },
+        )
 
         await communicator.disconnect()

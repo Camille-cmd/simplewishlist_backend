@@ -25,10 +25,34 @@ def do_update_wish(
 
 def get_all_users_wishes(wishlist: WishList, current_user: WishListUser) -> list[WishListUserModel]:
     """Return all the wishes of all the users in the wishlist"""
+    from api.pydantic_models import WishListWishModel
+
     users = wishlist.get_active_users()
     users_wishes = []
     for user in users:
-        wishes = user.get_user_wishes()
+        # Get all wishes for this user
+        wishes_queryset = user.wishes.all()
+
+        # Filter out suggested wishes if the current user is viewing their own wishes
+        if user == current_user:
+            wishes_queryset = wishes_queryset.exclude(suggested_by__isnull=False)
+
+        # Convert to pydantic models
+        wishes = []
+        for wish in wishes_queryset:
+            wishes.append(
+                WishListWishModel(
+                    name=wish.name,
+                    price=wish.price or None,
+                    description=wish.description or None,
+                    url=wish.url or None,
+                    id=wish.id,
+                    assigned_user=wish.assigned_user.name if wish.assigned_user else None,
+                    deleted=wish.deleted,
+                    suggested_by=wish.suggested_by.name if wish.suggested_by else None,
+                )
+            )
+
         wish_schema = WishListUserModel(
             user=user.name,
             wishes=wishes,
