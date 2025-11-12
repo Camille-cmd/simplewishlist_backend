@@ -65,8 +65,16 @@ class WishModel(BaseSchema):
     @field_validator("url", mode="before")
     @classmethod
     def convert_empty_url_to_none(cls, url: AnyUrl | str, info: ValidationInfo) -> AnyUrl | None:
-        """Convert empty string to None to avoid validation error"""
+        """Convert empty url to None to avoid validation error"""
         return url if url else None
+
+    @field_validator("suggested_for_user_id", mode="before")
+    @classmethod
+    def convert_empty_suggested_for_user_id_to_none(
+        cls, suggested_for_user_id: str | None, info: ValidationInfo
+    ) -> str | None:
+        """Convert empty suggested_for_user_id to None to avoid validation error"""
+        return suggested_for_user_id if suggested_for_user_id else None
 
     @model_validator(mode="before")
     @classmethod

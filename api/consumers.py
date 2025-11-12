@@ -131,7 +131,10 @@ class WishlistConsumer(JsonWebsocketConsumer):
 
     def create_wish(self, payload: WebhookPayloadModel):
         """Create a wish and send the updated wishes to the group"""
+        print(payload.post_values)
         wish_payload = WishModel.model_validate(payload.post_values)
+
+        print(wish_payload)
 
         # Determine if this is a suggested wish
         wish_data = wish_payload.dict()
