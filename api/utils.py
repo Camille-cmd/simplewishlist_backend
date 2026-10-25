@@ -47,7 +47,7 @@ def get_all_users_wishes(wishlist: WishList, current_user: WishListUser) -> list
                     description=wish.description or None,
                     url=wish.url or None,
                     id=wish.id,
-                    assigned_user=wish.assigned_user.name if wish.assigned_user else None,
+                    assigned_users=wish.get_assigned_user_names(),
                     deleted=wish.deleted,
                     suggested_by=wish.suggested_by.name if wish.suggested_by else None,
                 )

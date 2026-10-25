@@ -381,8 +381,7 @@
       "price": "Negotiable",
       "url": null,
       "description": "Would like to visit the Shire and have a pint at the Green Dragon. Maybe even visit Bag End. And meet the Bagginses. Have a second breakfast.",
-      "wishlist_user": "6999920a-67df-4c0d-8299-ebc88446d64c",
-      "assigned_user": null
+      "wishlist_user": "6999920a-67df-4c0d-8299-ebc88446d64c"
     }
   },
   {
@@ -416,8 +415,7 @@
       "price": "1000€",
       "url": null,
       "description": "As a birthday present, I would like a ring. A very special ring. One ring to rule them all. Or something like that, I can't remember where I left the old one. Don't worry, it's not important. Just a ring.",
-      "wishlist_user": "dacf9fd4-8a30-47d2-882f-cf07254a06b4",
-      "assigned_user": null
+      "wishlist_user": "dacf9fd4-8a30-47d2-882f-cf07254a06b4"
     }
   },
   {
@@ -429,8 +427,7 @@
       "price": "10€",
       "url": "https://www.amazon.com/Long-Stemmed-Pipe/dp/B00G6Z3Z1Q",
       "description": "I have lost my pipe and would like a new one. Preferably a long stemmed one.",
-      "wishlist_user": "dacf9fd4-8a30-47d2-882f-cf07254a06b4",
-      "assigned_user": null
+      "wishlist_user": "dacf9fd4-8a30-47d2-882f-cf07254a06b4"
     }
   },
   {
@@ -534,8 +531,7 @@
       "price": "",
       "url": null,
       "description": "",
-      "wishlist_user": "cb035bce-2c01-4e41-9134-cb7fb4a151d2",
-      "assigned_user": null
+      "wishlist_user": "cb035bce-2c01-4e41-9134-cb7fb4a151d2"
     }
   },
   {
@@ -591,8 +587,7 @@
       "price": "10€",
       "url": "https://www.amazon.com/Hat/dp/B00G6Z3Z1Q",
       "description": "Do you know those nice hat on the market on Tuesdays ? I would like one of those, in blue but not in red, I don't like red. Maybe in green. But in any case, not in red.",
-      "wishlist_user": "3fbb6c87-68fc-4112-ba55-0566a2e19bbe",
-      "assigned_user": null
+      "wishlist_user": "3fbb6c87-68fc-4112-ba55-0566a2e19bbe"
     }
   },
   {
@@ -602,6 +597,87 @@
       "id": "f35b02e3-56b7-4e7f-a618-66990a5c4103",
       "name": "Elrond",
       "wishlist": "06a6011a-143d-47e0-9bd0-39d428ba5a34"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 1,
+    "fields": {
+      "wish": "fee2881e-14f3-4848-8778-a40ae2a91d02",
+      "user": "f35b02e3-56b7-4e7f-a618-66990a5c4103",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 2,
+    "fields": {
+      "wish": "ba6ad8f6-03b4-4976-ab8d-0aa96c3a4262",
+      "user": "cb035bce-2c01-4e41-9134-cb7fb4a151d2",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 3,
+    "fields": {
+      "wish": "96071eec-6351-4f3b-a69a-5e9dafadc5d8",
+      "user": "dacf9fd4-8a30-47d2-882f-cf07254a06b4",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 4,
+    "fields": {
+      "wish": "d3464a78-db12-460c-aaed-770fdd1a1c24",
+      "user": "6999920a-67df-4c0d-8299-ebc88446d64c",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 5,
+    "fields": {
+      "wish": "95f8011d-2c58-4dfb-b6c0-3cc8c238c5a6",
+      "user": "3fbb6c87-68fc-4112-ba55-0566a2e19bbe",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 6,
+    "fields": {
+      "wish": "33ca68b3-5339-48b2-af8c-33dfc4587f03",
+      "user": "cb035bce-2c01-4e41-9134-cb7fb4a151d2",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 7,
+    "fields": {
+      "wish": "c989bd2e-61a7-4a23-8b09-58aa4775bedb",
+      "user": "f35b02e3-56b7-4e7f-a618-66990a5c4103",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 8,
+    "fields": {
+      "wish": "3a67a02b-49ec-4ab1-b7f2-462860073041",
+      "user": "dacf9fd4-8a30-47d2-882f-cf07254a06b4",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
+    }
+  },
+  {
+    "model": "core.wishassignment",
+    "pk": 9,
+    "fields": {
+      "wish": "f79f40cf-b469-4255-831b-88d8f0e35701",
+      "user": "f35b02e3-56b7-4e7f-a618-66990a5c4103",
+      "assigned_at": "2024-11-19T14:04:46.378Z"
     }
   }
 ]

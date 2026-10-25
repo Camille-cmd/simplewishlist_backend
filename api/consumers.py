@@ -83,7 +83,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
                     self.send_individual_message({"type": "error_message", "data": "Invalid action"})
 
         except SimpleWishlistValidationError as e:
-            self.send_individual_message({"type": "error_message", "data": str(e)})
+            self.send_individual_message({"type": "error_message", "data": str(e), "code": e.code})
         except Exception as e:
             self.send_individual_message({"type": "error_message", "data": str(e)})
 
@@ -109,7 +109,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
             deleted_wish_data = {
                 "wish_id": payload.object_id,
                 "wish_user_name": updated_wish.wishlist_user.name,
-                "assigned_user": None,
+                "assigned_users": [],
             }
             # Try to update, if the object no longer exists, it will return None
             try:
@@ -121,6 +121,10 @@ class WishlistConsumer(JsonWebsocketConsumer):
                     deleted_wish_data=deleted_wish_data,
                 )
                 return
+        else:
+            # Wish.update() re-fetches the wish with a row lock, so the instance we hold may be
+            # stale; re-fetch it so that we broadcast the fresh state
+            updated_wish.refresh_from_db()
 
         action = "update_wish"
         if wish_payload.dict()["assigned_user"] is not None:
@@ -156,11 +160,11 @@ class WishlistConsumer(JsonWebsocketConsumer):
         """Delete a wish and send the updated wishes to the group"""
         instance = get_object_or_404(Wish, pk=payload.object_id)
         wish_user_name = instance.wishlist_user.name
-        assigned_user = instance.assigned_user.name if instance.assigned_user else None
-        deleted_wish_data = {"wish_id": instance.id, "wish_user_name": wish_user_name, "assigned_user": assigned_user}
-        can_be_deleted, error_message = instance.can_be_deleted(self.current_user.id)
+        assigned_users = instance.get_assigned_user_names()
+        deleted_wish_data = {"wish_id": instance.id, "wish_user_name": wish_user_name, "assigned_users": assigned_users}
+        can_be_deleted, code, error_message = instance.can_be_deleted(self.current_user.id)
         if not can_be_deleted:
-            raise SimpleWishlistValidationError(model="Wish", field=None, message=error_message)
+            raise SimpleWishlistValidationError(model="Wish", field=None, message=error_message, code=code)
 
         instance.mark_deleted()
 
@@ -177,7 +181,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
             user_wish_data = UserDeletedWishDataModel(
                 user=deleted_wish_data["wish_user_name"],
                 wish_id=deleted_wish_data["wish_id"],
-                assigned_user=deleted_wish_data["assigned_user"],
+                assigned_users=deleted_wish_data["assigned_users"],
             )
         else:
             wish_data = WishListWishModel(
@@ -186,7 +190,7 @@ class WishlistConsumer(JsonWebsocketConsumer):
                 description=wish.description or None,
                 url=wish.url or None,
                 id=wish.id,
-                assigned_user=wish.assigned_user.name if wish.assigned_user else None,
+                assigned_users=wish.get_assigned_user_names(),
                 deleted=wish.deleted,
                 suggested_by=wish.suggested_by.name if wish.suggested_by else None,
             )

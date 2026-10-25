@@ -42,7 +42,7 @@ class WishListWishModel(BaseSchema):
     url: Optional[AnyUrl] = None
     description: Optional[str] = None
     id: Optional[UUID4] = None
-    assigned_user: Optional[str] = None
+    assigned_users: list[str] = []
     suggested_by: Optional[str] = None
 
     @field_serializer("url")
@@ -131,7 +131,7 @@ class UserWishDataModel(BaseSchema):
 class UserDeletedWishDataModel(BaseSchema):
     user: str
     wish_id: UUID4
-    assigned_user: Optional[str] = None
+    assigned_users: list[str] = []
 
 
 class WishListModel(BaseSchema):
