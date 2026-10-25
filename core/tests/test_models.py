@@ -1,4 +1,3 @@
-import random
 import threading
 from uuid import UUID
 
@@ -112,10 +111,12 @@ class TestWish(SimpleWishlistBaseTestCase):
     # --- update() ---
 
     def test_two_users_can_take_the_same_wish(self):
-        # Alice already took the wish (setUp); Bob joins
-        self.assigned_wish.update(current_user_id=self.user.id, update_data={"assigned_user": str(self.user.id)})
+        # Alice already took the wish (setUp); a third user joins (the owner can never take it)
+        self.assigned_wish.update(
+            current_user_id=self.wrong_user.id, update_data={"assigned_user": str(self.wrong_user.id)}
+        )
         self.assigned_wish.refresh_from_db()
-        self.assertEqual(set(self.assigned_wish.assigned_users.all()), {self.second_user, self.user})
+        self.assertEqual(set(self.assigned_wish.assigned_users.all()), {self.second_user, self.wrong_user})
 
     def test_same_user_cannot_take_twice(self):
         with self.assertRaisesRegex(SimpleWishlistValidationError, "You have already taken this wish."):
@@ -131,12 +132,14 @@ class TestWish(SimpleWishlistBaseTestCase):
         self.assertEqual(list(self.assigned_wish.assigned_users.all()), [self.second_user])
 
     def test_release_by_taker_removes_only_that_taker(self):
-        # Both Bob and Alice take the wish
-        self.assigned_wish.update(current_user_id=self.user.id, update_data={"assigned_user": str(self.user.id)})
+        # Both Alice and Gandalf take the wish
+        self.assigned_wish.update(
+            current_user_id=self.wrong_user.id, update_data={"assigned_user": str(self.wrong_user.id)}
+        )
         # Alice releases
         self.assigned_wish.update(current_user_id=self.second_user.id, update_data={"assigned_user": None})
         self.assigned_wish.refresh_from_db()
-        self.assertEqual(list(self.assigned_wish.assigned_users.all()), [self.user])
+        self.assertEqual(list(self.assigned_wish.assigned_users.all()), [self.wrong_user])
 
     def test_last_taker_release_soft_deleted_wish_hard_deletes(self):
         self.assigned_wish.deleted = True
@@ -146,15 +149,17 @@ class TestWish(SimpleWishlistBaseTestCase):
             self.assigned_wish.refresh_from_db()
 
     def test_non_last_taker_release_soft_deleted_wish_stays(self):
-        # Both Bob and Alice take the wish, then it is soft-deleted
-        self.assigned_wish.update(current_user_id=self.user.id, update_data={"assigned_user": str(self.user.id)})
+        # Both Alice and Gandalf take the wish, then it is soft-deleted
+        self.assigned_wish.update(
+            current_user_id=self.wrong_user.id, update_data={"assigned_user": str(self.wrong_user.id)}
+        )
         self.assigned_wish.deleted = True
         self.assigned_wish.save()
-        # Alice releases; Bob remains, so the wish stays soft-deleted
+        # Alice releases; Gandalf remains, so the wish stays soft-deleted
         self.assigned_wish.update(current_user_id=self.second_user.id, update_data={"assigned_user": None})
         self.assigned_wish.refresh_from_db()
         self.assertTrue(self.assigned_wish.deleted)
-        self.assertEqual(list(self.assigned_wish.assigned_users.all()), [self.user])
+        self.assertEqual(list(self.assigned_wish.assigned_users.all()), [self.wrong_user])
 
     def test_update_ok(self):
         # The owner changes a field, everything should work fine
@@ -171,10 +176,14 @@ class TestWish(SimpleWishlistBaseTestCase):
             self.unassigned_wish.update(current_user_id=self.second_user.id, update_data=update_data)
 
     def test_update_assigned_user_does_not_exist(self):
-        # The assigned user can only be updated if it exists
-        fake_uuid = UUID(int=random.getrandbits(128), version=4)
+        # The assigned user can only be updated if it exists.
+        # The candidate must be the current user (self-assignment only), so we delete
+        # a real user and try to assign the wish to that now-missing user.
+        ghost = WishListUserFactory(name="Ghost", wishlist=self.wishlist)
+        ghost_id = ghost.id
+        ghost.delete()
         with self.assertRaisesRegex(SimpleWishlistValidationError, "does not exist."):
-            self.unassigned_wish.update(current_user_id=self.user.id, update_data={"assigned_user": str(fake_uuid)})
+            self.unassigned_wish.update(current_user_id=ghost_id, update_data={"assigned_user": str(ghost_id)})
 
         # However, if it exists, the assignment should work
         self.unassigned_wish.update(

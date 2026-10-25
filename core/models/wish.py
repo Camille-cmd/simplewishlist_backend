@@ -1,6 +1,6 @@
 import uuid
 
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, models
 
 from api.exceptions import SimpleWishlistValidationError
 
@@ -100,76 +100,75 @@ class Wish(models.Model):
                 code="wish_already_taken",
             )
 
-    def update(self, current_user_id: uuid.UUID, update_data: dict) -> None:
+    def update(self, current_user_id: uuid.UUID, update_data: dict) -> bool:
         """
         A wish can be changed only by its owner except for the field assigned_user which should be
         changed only by others
+        Returns True if the wish was permanently deleted during the update.
         """
         from core.models import WishListUser
 
-        with transaction.atomic():
-            # Re-fetch the wish with a row lock so that concurrent take/release operations
-            # on the same wish are serialized.
-            self = Wish.objects.select_for_update().get(pk=self.pk)
-            for attr, value in update_data.items():
-                if attr == "assigned_user":
-                    # validation of assigned user
-                    self.validate_assignment(candidate_user_id=value, current_user_id=current_user_id)
-                    if value:
-                        # Take: add self.
-                        try:
-                            user = WishListUser.objects.get(id=value)
-                        except WishListUser.DoesNotExist:
-                            raise SimpleWishlistValidationError(
-                                model="Wish",
-                                field="assigned_user",
-                                message="The user the wish is being assigned to does not exist.",
-                                code="wish_assignment_user_not_found",
-                            )
-                        try:
-                            self.assigned_users.add(user)
-                        except IntegrityError:
-                            # Defensive: unique (wish, user) constraint (double-click etc.)
-                            raise SimpleWishlistValidationError(
-                                model="Wish",
-                                field="assigned_user",
-                                message="You have already taken this wish.",
-                                code="wish_already_taken",
-                            )
-                    else:
-                        # Release: remove self (no-op if not a taker).
-                        self.assigned_users.remove(WishListUser.objects.get(id=current_user_id))
-                        # If the wish was soft-deleted and no takers remain, delete permanently.
-                        if self.deleted and not self.assigned_users.exists():
-                            self.delete()
-                            # Return now we do not want to save
-                            return
+        for attr, value in update_data.items():
+            if attr == "assigned_user":
+                # validation of assigned user
+                self.validate_assignment(candidate_user_id=value, current_user_id=current_user_id)
+                if value:
+                    # Take: add self.
+                    try:
+                        user = WishListUser.objects.get(id=value)
+                    except WishListUser.DoesNotExist:
+                        raise SimpleWishlistValidationError(
+                            model="Wish",
+                            field="assigned_user",
+                            message="The user the wish is being assigned to does not exist.",
+                            code="wish_assignment_user_not_found",
+                        )
+                    try:
+                        self.assigned_users.add(user)
+                    except IntegrityError:
+                        # Defensive: unique (wish, user) constraint (double-click etc.)
+                        raise SimpleWishlistValidationError(
+                            model="Wish",
+                            field="assigned_user",
+                            message="You have already taken this wish.",
+                            code="wish_already_taken",
+                        )
                 else:
-                    # Check edit permissions based on whether it's a suggested wish or regular wish
-                    # Suggested wish: only suggester can edit
-                    # Regular wish: only owner can edit
-                    if self.suggested_by is not None:
-                        # Suggested wish
-                        if current_user_id != self.suggested_by.id:
-                            raise SimpleWishlistValidationError(
-                                model="Wish",
-                                field=attr,
-                                message="Only the suggester can edit this suggested wish.",
-                                code="wish_suggested_edit_unauthorized",
-                            )
-                    else:
-                        # Regular wish
-                        if current_user_id != self.wishlist_user.id:
-                            raise SimpleWishlistValidationError(
-                                model="Wish",
-                                field=attr,
-                                message="Only the owner of the wish can change the wish data.",
-                                code="wish_edit_unauthorized",
-                            )
+                    # Release: remove self (no-op if not a taker).
+                    self.assigned_users.remove(WishListUser.objects.get(id=current_user_id))
+                    # If the wish was soft-deleted and no takers remain, delete permanently.
+                    if self.deleted and not self.assigned_users.exists():
+                        self.delete()
+                        # Return now we do not want to save
+                        return True
+            else:
+                # Check edit permissions based on whether it's a suggested wish or regular wish
+                # Suggested wish: only suggester can edit
+                # Regular wish: only owner can edit
+                if self.suggested_by is not None:
+                    # Suggested wish
+                    if current_user_id != self.suggested_by.id:
+                        raise SimpleWishlistValidationError(
+                            model="Wish",
+                            field=attr,
+                            message="Only the suggester can edit this suggested wish.",
+                            code="wish_suggested_edit_unauthorized",
+                        )
+                else:
+                    # Regular wish
+                    if current_user_id != self.wishlist_user.id:
+                        raise SimpleWishlistValidationError(
+                            model="Wish",
+                            field=attr,
+                            message="Only the owner of the wish can change the wish data.",
+                            code="wish_edit_unauthorized",
+                        )
 
-                    setattr(self, attr, value)
+                setattr(self, attr, value)
 
             self.save()
+
+        return False
 
     def mark_deleted(self):
         """

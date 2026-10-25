@@ -690,7 +690,8 @@ class WishlistConsumerTest(TransactionTestCase):
         # First message is the connection message
         await communicator_bob.receive_json_from()
 
-        wish = await sync_to_async(WishFactory)(wishlist_user=self.second_user)
+        # Charlie owns the wish so that both Bob and Alice can take it (the owner can never take it)
+        wish = await sync_to_async(WishFactory)(wishlist_user=self.third_user)
 
         # Bob takes the wish
         await communicator_bob.send_json_to(
@@ -707,7 +708,7 @@ class WishlistConsumerTest(TransactionTestCase):
             {
                 "type": "updated_wish",
                 "data": {
-                    "user": "Alice",
+                    "user": "Charlie",
                     "wish": {
                         "name": wish.name,
                         "deleted": False,
@@ -744,7 +745,7 @@ class WishlistConsumerTest(TransactionTestCase):
         expected_response = {
             "type": "updated_wish",
             "data": {
-                "user": "Alice",
+                "user": "Charlie",
                 "wish": {
                     "name": wish.name,
                     "deleted": False,
@@ -774,7 +775,7 @@ class WishlistConsumerTest(TransactionTestCase):
         expected_response = {
             "type": "updated_wish",
             "data": {
-                "user": "Alice",
+                "user": "Charlie",
                 "wish": {
                     "name": wish.name,
                     "deleted": False,
@@ -971,7 +972,7 @@ class WishlistConsumerTest(TransactionTestCase):
             "action": "delete_wish",
         }
         for communicator in communicators.values():
-            self.assertEqual(await communicator.receive_json_from(), expected_response)
+            self.assertEqual(await communicator.receive_json_from(timeout=5), expected_response)
 
         wish = await sync_to_async(Wish.objects.get)(id=wish.id)
         self.assertTrue(wish.deleted)
@@ -1003,8 +1004,11 @@ class WishlistConsumerTest(TransactionTestCase):
             "userToken": "Bob",
             "action": "update_wish",
         }
-        for communicator in communicators.values():
-            self.assertEqual(await communicator.receive_json_from(), expected_response)
+        # Receive from the actor (Bob) first so that any individual error_message
+        # surfaces as an assertion failure instead of an opaque timeout on the others
+        self.assertEqual(await communicators["bob"].receive_json_from(timeout=5), expected_response)
+        for name in ("charlie", "alice"):
+            self.assertEqual(await communicators[name].receive_json_from(timeout=5), expected_response)
 
         wish = await sync_to_async(Wish.objects.get)(id=wish.id)
         self.assertTrue(wish.deleted)
@@ -1029,7 +1033,7 @@ class WishlistConsumerTest(TransactionTestCase):
             "action": "delete_wish",
         }
         for communicator in communicators.values():
-            self.assertEqual(await communicator.receive_json_from(), expected_response)
+            self.assertEqual(await communicator.receive_json_from(timeout=5), expected_response)
 
         with self.assertRaises(Wish.DoesNotExist):
             await sync_to_async(Wish.objects.get)(id=wish.id)

@@ -98,33 +98,27 @@ class WishlistConsumer(JsonWebsocketConsumer):
             wish_payload = WishModelUpdate.model_validate(payload.post_values)
 
         # Update the wish => if the assigned_user is changing, we need to keep the None values
-        updated_wish = do_update_wish(
+        updated_wish, permanently_deleted = do_update_wish(
             self.current_user, payload.object_id, wish_payload, exclude_unset=not changing_assigned_user
         )
 
-        # When we un-assign a deleted wish, this is a permanent deletion
-        # and the wish was completely deleted during do_update_wish
-        if changing_assigned_user and updated_wish.deleted:
-            # Prepare data in case the wish was deleted
+        # When the last taker releases a soft-deleted wish, the wish was completely deleted
+        # during do_update_wish; broadcast the deletion with just the wish_id
+        if permanently_deleted:
             deleted_wish_data = {
                 "wish_id": payload.object_id,
                 "wish_user_name": updated_wish.wishlist_user.name,
                 "assigned_users": [],
             }
-            # Try to update, if the object no longer exists, it will return None
-            try:
-                updated_wish = updated_wish.refresh_from_db()
-            except Wish.DoesNotExist:
-                self._send_updated_wish(
-                    wish=None,  # handle delete cases with just the wish_id (it will be displayed as deleted)
-                    action="delete_wish",
-                    deleted_wish_data=deleted_wish_data,
-                )
-                return
-        else:
-            # Wish.update() re-fetches the wish with a row lock, so the instance we hold may be
-            # stale; re-fetch it so that we broadcast the fresh state
-            updated_wish.refresh_from_db()
+            self._send_updated_wish(
+                wish=None,  # handle delete cases with just the wish_id (it will be displayed as deleted)
+                action="delete_wish",
+                deleted_wish_data=deleted_wish_data,
+            )
+            return
+
+        # Re-fetch the wish so that we broadcast the fresh state
+        updated_wish = Wish.objects.get(pk=updated_wish.pk)
 
         action = "update_wish"
         if wish_payload.dict()["assigned_user"] is not None:
