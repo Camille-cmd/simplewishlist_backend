@@ -18,11 +18,8 @@ class TestWishListView(SimpleWishlistBaseTestCase):
         # Create Wishes for the user
         self.unassigned_wish = WishFactory.create(name="A big Teddy Bear", wishlist_user=self.user)
         # Second user took one of the wishes
-        self.assigned_wish = WishFactory.create(
-            name="A pretty Barbie",
-            wishlist_user=self.user,
-            assigned_user=self.second_user,
-        )
+        self.assigned_wish = WishFactory.create(name="A pretty Barbie", wishlist_user=self.user)
+        self.assigned_wish.assigned_users.add(self.second_user)
 
         url = reverse("api-1.0.0:get_wishlist_settings")
         response = self.client.get(url)

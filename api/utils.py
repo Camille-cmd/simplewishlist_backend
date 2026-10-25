@@ -6,7 +6,7 @@ from core.models import Wish, WishListUser, WishList
 
 def do_update_wish(
     current_user: WishListUser, wish_id: int, payload: WishModelUpdate, exclude_unset: bool = True
-) -> Wish:
+) -> tuple[Wish, bool]:
     """
     Update a wish from a wish id
 
@@ -15,12 +15,17 @@ def do_update_wish(
         wish_id (int): The wish id
         payload (WishModelUpdate): The payload to update the wish
         exclude_unset (bool): Exclude the None values from the payload (default: True)
+
+    Returns:
+        The updated wish and whether it was permanently deleted during the update
     """
     instance = get_object_or_404(Wish, pk=wish_id)
 
-    instance.update(current_user_id=current_user.id, update_data=payload.dict(exclude_unset=exclude_unset))
+    permanently_deleted = instance.update(
+        current_user_id=current_user.id, update_data=payload.dict(exclude_unset=exclude_unset)
+    )
 
-    return instance
+    return instance, permanently_deleted
 
 
 def get_all_users_wishes(wishlist: WishList, current_user: WishListUser) -> list[WishListUserModel]:
@@ -47,7 +52,7 @@ def get_all_users_wishes(wishlist: WishList, current_user: WishListUser) -> list
                     description=wish.description or None,
                     url=wish.url or None,
                     id=wish.id,
-                    assigned_user=wish.assigned_user.name if wish.assigned_user else None,
+                    assigned_users=wish.get_assigned_user_names(),
                     deleted=wish.deleted,
                     suggested_by=wish.suggested_by.name if wish.suggested_by else None,
                 )
